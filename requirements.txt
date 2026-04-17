@@ -5,3 +5,4 @@ lxml
 duckduckgo-search
 dnspython
 fpdf2
+gunicorn

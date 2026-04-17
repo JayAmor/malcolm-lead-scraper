@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from datetime import date
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
@@ -178,4 +179,5 @@ def api_db_export_csv():
 
 
 if __name__ == '__main__':
-    app.run(port=3000, debug=True, threaded=True)
+    port = int(os.environ.get('PORT', 3000))
+    app.run(port=port, debug=False, threaded=True)
