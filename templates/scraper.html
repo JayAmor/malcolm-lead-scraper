@@ -6,514 +6,416 @@
   <title>Lead Scraper — Malcolm AI</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      min-height: 100vh;
-      padding: 32px 24px 60px;
-    }
-
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 32px 24px 60px; }
     a { color: inherit; text-decoration: none; }
+    .container { max-width: 1120px; margin: 0 auto; }
 
-    .container { max-width: 1100px; margin: 0 auto; }
-
-    /* ── Header ── */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 36px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #1e2533;
-    }
-    .logo { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e05252; }
-    .back-link {
-      font-size: 12px; color: #64748b;
-      display: flex; align-items: center; gap: 6px;
-      transition: color 0.2s;
-    }
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #1e2533; }
+    .logo { font-size: 13px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #e05252; }
+    .back-link { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; transition: color .2s; }
     .back-link:hover { color: #e2e8f0; }
 
-    /* ── Page title ── */
-    .page-title { margin-bottom: 28px; }
+    /* Page title */
+    .page-title { margin-bottom: 24px; }
     .page-title h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-    .page-title h1 span {
-      background: linear-gradient(135deg, #e05252, #f59e42);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
+    .page-title h1 span { background: linear-gradient(135deg,#e05252,#f59e42); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .page-title p { font-size: 13px; color: #64748b; }
 
-    /* ── Control Panel ── */
-    .panel {
-      background: #141824;
-      border: 1px solid #1e2533;
-      border-radius: 14px;
-      padding: 24px 28px;
-      margin-bottom: 20px;
-    }
+    /* Tabs */
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #1e2533; padding-bottom: 0; }
+    .tab-btn { background: none; border: none; color: #64748b; font-size: 13px; font-weight: 600; padding: 8px 18px 10px; cursor: pointer; position: relative; transition: color .2s; }
+    .tab-btn::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: transparent; transition: background .2s; }
+    .tab-btn.active { color: #e2e8f0; }
+    .tab-btn.active::after { background: linear-gradient(135deg,#e05252,#f59e42); }
+    .tab-btn:hover:not(.active) { color: #94a3b8; }
+    .db-badge { font-size: 10px; font-weight: 700; background: #1a1f2e; border: 1px solid #1e2533; border-radius: 10px; padding: 1px 7px; margin-left: 6px; color: #64748b; }
+    .db-badge.has-data { background: #052e16; border-color: #14532d; color: #22c55e; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
 
-    .panel-title {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #475569; margin-bottom: 18px;
-    }
+    /* Panel */
+    .panel { background: #141824; border: 1px solid #1e2533; border-radius: 14px; padding: 24px 28px; margin-bottom: 20px; }
+    .panel-title { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #475569; margin-bottom: 18px; }
 
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 180px;
-      gap: 16px;
-      align-items: end;
-      margin-bottom: 18px;
-    }
-
+    /* Controls */
+    .controls-grid { display: grid; grid-template-columns: 1fr 1fr 180px; gap: 16px; align-items: end; margin-bottom: 18px; }
     .field-group { display: flex; flex-direction: column; gap: 6px; }
-
-    label {
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;
-    }
-
-    select, input[type="number"] {
-      background: #0f1117;
-      border: 1px solid #1e2533;
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 14px;
-      padding: 10px 14px;
-      width: 100%;
-      outline: none;
-      transition: border-color 0.2s;
-      -webkit-appearance: none;
-      appearance: none;
-    }
+    label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #64748b; }
+    select, input[type="number"] { background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; color: #e2e8f0; font-size: 14px; padding: 10px 14px; width: 100%; outline: none; transition: border-color .2s; -webkit-appearance: none; appearance: none; }
     select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
     select:focus, input[type="number"]:focus { border-color: #e05252; }
-
-    .options-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-    .checkbox-group input[type="checkbox"] {
-      width: 16px; height: 16px; accent-color: #e05252; cursor: pointer;
-    }
+    .options-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; accent-color: #e05252; cursor: pointer; }
     .checkbox-label { font-size: 13px; color: #94a3b8; }
     .checkbox-label strong { color: #e2e8f0; }
+    .checkbox-hint { font-size: 11px; color: #475569; margin-top: 2px; padding-left: 26px; }
+    .scrape-btn { background: linear-gradient(135deg,#e05252,#f59e42); border: none; border-radius: 9px; color: #fff; font-size: 14px; font-weight: 700; letter-spacing: .04em; padding: 11px 28px; cursor: pointer; transition: opacity .2s, transform .15s; white-space: nowrap; }
+    .scrape-btn:hover { opacity: .9; transform: translateY(-1px); }
+    .scrape-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
-    .checkbox-hint { font-size: 11px; color: #475569; margin-top: 2px; }
-
-    .scrape-btn {
-      background: linear-gradient(135deg, #e05252, #f59e42);
-      border: none;
-      border-radius: 9px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 11px 28px;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
-      white-space: nowrap;
-    }
-    .scrape-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .scrape-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    /* ── Status bar ── */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .status-counts { display: flex; gap: 16px; flex-wrap: wrap; }
-
-    .count-pill {
-      font-size: 12px; font-weight: 600;
-      padding: 4px 12px; border-radius: 20px;
-      border: 1px solid;
-    }
+    /* Status bar */
+    .status-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .status-counts { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .count-pill { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid; }
     .count-pill.total { color: #94a3b8; border-color: #1e2533; background: #141824; }
     .count-pill.high { color: #22c55e; border-color: #14532d; background: #052e16; }
     .count-pill.moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
     .count-pill.low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
-
-    .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    .action-btn {
-      font-size: 12px; font-weight: 600;
-      padding: 7px 16px; border-radius: 8px;
-      border: 1px solid #1e2533;
-      background: #141824; color: #94a3b8;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s, background 0.2s;
-      display: flex; align-items: center; gap: 6px;
-    }
+    .export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .action-btn { font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: 1px solid #1e2533; background: #141824; color: #94a3b8; cursor: pointer; transition: border-color .2s, color .2s; display: flex; align-items: center; gap: 5px; }
     .action-btn:hover { border-color: #e05252; color: #e2e8f0; }
-    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .action-btn.validate-btn:hover { border-color: #eab308; }
+    .action-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .action-btn.save-btn { color: #22c55e; border-color: #14532d; }
+    .action-btn.save-btn:hover { background: #052e16; border-color: #22c55e; }
+    .action-btn.validate-btn:hover { border-color: #eab308; color: #eab308; }
 
-    /* ── Loading ── */
-    .loading-state {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 60px 20px;
-      text-align: center;
-    }
+    /* Loading */
+    .loading-state { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 50px 20px; text-align: center; }
     .loading-state.visible { display: flex; }
-
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid #1e2533;
-      border-top-color: #e05252;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
+    .spinner { width: 36px; height: 36px; border: 3px solid #1e2533; border-top-color: #e05252; border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     .loading-text { font-size: 14px; color: #64748b; }
-    .loading-text strong { color: #e2e8f0; }
+    .loading-text strong { color: #e2e8f0; display: block; margin-bottom: 4px; }
+    .live-count { font-size: 12px; color: #22c55e; margin-top: 6px; }
 
-    /* ── Empty / Error states ── */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #475569;
-      font-size: 14px;
-    }
-    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
-    .empty-state p { color: #64748b; }
+    /* Empty / error */
+    .empty-state { text-align: center; padding: 50px 20px; color: #475569; font-size: 14px; }
+    .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+    .empty-state p { color: #64748b; margin-top: 4px; }
+    .error-banner { display: none; background: #1c0a0a; border: 1px solid #7f1d1d; border-radius: 10px; padding: 14px 18px; color: #ef4444; font-size: 13px; margin-bottom: 16px; }
 
-    .error-banner {
-      display: none;
-      background: #1c0a0a;
-      border: 1px solid #7f1d1d;
-      border-radius: 10px;
-      padding: 14px 18px;
-      color: #ef4444;
-      font-size: 13px;
-      margin-bottom: 16px;
-    }
-
-    /* ── Results table ── */
+    /* Table */
     .table-wrap { overflow-x: auto; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    thead tr {
-      border-bottom: 1px solid #1e2533;
-    }
-
-    th {
-      text-align: left;
-      padding: 10px 12px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #475569;
-      white-space: nowrap;
-    }
-
-    tbody tr {
-      border-bottom: 1px solid #1a2030;
-      transition: background 0.15s;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { border-bottom: 1px solid #1e2533; }
+    th { text-align: left; padding: 10px 12px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #475569; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #1a2030; transition: background .15s; }
     tbody tr:hover { background: #141824; }
-
-    td {
-      padding: 12px 12px;
-      vertical-align: top;
-      color: #cbd5e1;
-      max-width: 200px;
-    }
-
-    .business-name {
-      font-weight: 600;
-      color: #e2e8f0;
-      display: block;
-    }
-    .business-link {
-      font-size: 11px;
-      color: #e05252;
-      display: block;
-      margin-top: 2px;
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    td { padding: 11px 12px; vertical-align: top; color: #cbd5e1; }
+    .business-name { font-weight: 600; color: #e2e8f0; display: block; }
+    .business-link { font-size: 11px; color: #e05252; display: block; margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .business-link:hover { text-decoration: underline; }
 
-    .quality-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      border: 1px solid;
-      white-space: nowrap;
-    }
-    .quality-badge.High { color: #22c55e; border-color: #14532d; background: #052e16; }
-    .quality-badge.Moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
-    .quality-badge.Low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid; white-space: nowrap; }
+    .badge.High { color: #22c55e; border-color: #14532d; background: #052e16; }
+    .badge.Moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
+    .badge.Low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
+    .badge.ads { color: #f59e42; border-color: #92400e; background: #1c0f00; }
 
-    .email-cell { display: flex; align-items: flex-start; gap: 6px; }
-    .email-status {
-      font-size: 11px;
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-    .email-status.valid { color: #22c55e; }
-    .email-status.invalid { color: #ef4444; }
-    .email-status.unverified { color: #eab308; }
+    /* Email validation icons */
+    .ev { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .ev.valid { color: #22c55e; }
+    .ev.invalid { color: #ef4444; }
+    .ev.unverified { color: #eab308; }
+    .email-cell { display: flex; align-items: flex-start; gap: 5px; }
 
-    .notes-cell {
-      font-size: 12px;
-      color: #64748b;
-      max-width: 220px;
-      line-height: 1.5;
-    }
-
-    .remove-btn {
-      background: none;
-      border: none;
-      color: #475569;
-      cursor: pointer;
-      font-size: 14px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      transition: color 0.2s, background 0.2s;
-    }
-    .remove-btn:hover { color: #ef4444; background: #1c0a0a; }
-
-    .phone-cell, .contact-cell { white-space: nowrap; }
-
+    .notes-text { font-size: 11px; color: #64748b; line-height: 1.5; max-width: 200px; }
     .empty-val { color: #334155; }
+    .rm-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; transition: color .2s, background .2s; }
+    .rm-btn:hover { color: #ef4444; background: #1c0a0a; }
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #141824;
-      border: 1px solid #1e2533;
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 13px;
-      color: #e2e8f0;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.25s, transform 0.25s;
-      z-index: 999;
-      max-width: 300px;
-    }
+    /* Saved Leads tab */
+    .db-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card { background: #0f1117; border: 1px solid #1e2533; border-radius: 10px; padding: 12px 18px; min-width: 100px; text-align: center; }
+    .stat-num { font-size: 24px; font-weight: 700; color: #e2e8f0; }
+    .stat-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #475569; margin-top: 2px; }
+
+    .status-select { background: #0f1117; border: 1px solid #1e2533; border-radius: 6px; color: #e2e8f0; font-size: 11px; font-weight: 600; padding: 4px 8px; cursor: pointer; outline: none; }
+    .status-select.new { color: #94a3b8; }
+    .status-select.contacted { color: #60a5fa; }
+    .status-select.qualified { color: #22c55e; }
+    .status-select.disqualified { color: #ef4444; }
+
+    .db-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #141824; border: 1px solid #1e2533; border-radius: 10px; padding: 12px 18px; font-size: 13px; color: #e2e8f0; opacity: 0; transform: translateY(10px); transition: opacity .25s, transform .25s; z-index: 999; max-width: 320px; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { border-color: #14532d; color: #22c55e; }
     .toast.error { border-color: #7f1d1d; color: #ef4444; }
 
-    @media (max-width: 700px) {
-      .controls-grid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 700px) { .controls-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 <div class="container">
 
-  <!-- Header -->
   <header class="header">
     <div class="logo">ReadTomato</div>
     <a href="/" class="back-link">&#8592; Dashboard</a>
   </header>
 
-  <!-- Title -->
   <div class="page-title">
     <h1>Malcolm AI <span>Lead Scraper</span></h1>
     <p>Target businesses by industry and location. Qualify, validate, and export.</p>
   </div>
 
-  <!-- Control Panel -->
-  <div class="panel">
-    <div class="panel-title">Search Parameters</div>
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('search')">Search</button>
+    <button class="tab-btn" onclick="switchTab('saved')">
+      Saved Leads <span class="db-badge" id="db-badge">0</span>
+    </button>
+  </div>
 
-    <div class="controls-grid">
-      <div class="field-group">
-        <label for="sel-industry">Industry</label>
-        <select id="sel-industry">
-          <option value="" disabled selected>Select industry…</option>
-          {% for group, items in industries.items() %}
-          <optgroup label="{{ group }}">
-            {% for item in items %}
-            <option value="{{ item }}">{{ item }}</option>
+  <!-- ── TAB: Search ── -->
+  <div id="tab-search" class="tab-pane active">
+
+    <div class="panel">
+      <div class="panel-title">Search Parameters</div>
+      <div class="controls-grid">
+        <div class="field-group">
+          <label for="sel-industry">Industry</label>
+          <select id="sel-industry">
+            <option value="" disabled selected>Select industry…</option>
+            {% for group, items in industries.items() %}
+            <optgroup label="{{ group }}">
+              {% for item in items %}
+              <option value="{{ item }}">{{ item }}</option>
+              {% endfor %}
+            </optgroup>
             {% endfor %}
-          </optgroup>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="field-group">
-        <label for="sel-location">Location</label>
-        <select id="sel-location">
-          <option value="" disabled selected>Select city…</option>
-          {% for region, cities in locations.items() %}
-          <optgroup label="{{ region }}">
-            {% for city in cities %}
-            <option value="{{ city }}">{{ city }}</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="sel-location">Location</label>
+          <select id="sel-location">
+            <option value="" disabled selected>Select city…</option>
+            {% for region, cities in locations.items() %}
+            <optgroup label="{{ region }}">
+              {% for city in cities %}
+              <option value="{{ city }}">{{ city }}</option>
+              {% endfor %}
+            </optgroup>
             {% endfor %}
-          </optgroup>
-          {% endfor %}
-        </select>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="inp-count">Number of Leads</label>
+          <input type="number" id="inp-count" value="15" min="1" max="50" />
+        </div>
       </div>
-
-      <div class="field-group">
-        <label for="inp-count">Number of Leads</label>
-        <input type="number" id="inp-count" value="15" min="1" max="50" />
-      </div>
-    </div>
-
-    <div class="options-row">
-      <div>
-        <label class="checkbox-group" for="chk-validate">
-          <input type="checkbox" id="chk-validate" />
-          <span class="checkbox-label"><strong>Validate emails</strong> after scraping</span>
-        </label>
-        <div class="checkbox-hint" style="padding-left:26px">Checks MX records + SMTP — removes emails that fail. Adds ~30s.</div>
-      </div>
-      <button class="scrape-btn" id="scrape-btn" onclick="runScrape()">Scrape Leads</button>
-    </div>
-  </div>
-
-  <!-- Error banner -->
-  <div class="error-banner" id="error-banner"></div>
-
-  <!-- Status bar + export -->
-  <div class="status-bar" id="status-bar" style="display:none">
-    <div class="status-counts" id="status-counts"></div>
-    <div class="export-actions">
-      <button class="action-btn validate-btn" id="validate-btn" onclick="runValidate()" title="Check if emails are active and remove invalid ones">
-        &#10003; Validate Emails
-      </button>
-      <button class="action-btn" onclick="exportFile('csv')">&#8595; Export CSV</button>
-      <button class="action-btn" onclick="exportFile('pdf')">&#8595; Export PDF</button>
-    </div>
-  </div>
-
-  <!-- Results panel -->
-  <div class="panel" id="results-panel">
-    <div class="loading-state" id="loading-state">
-      <div class="spinner"></div>
-      <div class="loading-text">
-        <strong id="loading-label">Searching for leads…</strong><br>
-        <span id="loading-sub">This takes 30–90 seconds. Hang tight.</span>
+      <div class="options-row">
+        <div>
+          <label class="checkbox-group" for="chk-validate">
+            <input type="checkbox" id="chk-validate" />
+            <span class="checkbox-label"><strong>Validate emails</strong> after scraping</span>
+          </label>
+          <div class="checkbox-hint">Checks MX records + SMTP — removes emails that fail. Adds ~30s.</div>
+        </div>
+        <button class="scrape-btn" id="scrape-btn" onclick="runScrape()">Scrape Leads</button>
       </div>
     </div>
 
-    <div class="empty-state" id="empty-state">
-      <div class="icon">&#128270;</div>
-      <strong>Ready to search</strong>
-      <p>Pick an industry and location, then hit Scrape Leads.</p>
+    <div class="error-banner" id="error-banner"></div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar" style="display:none">
+      <div class="status-counts" id="status-counts"></div>
+      <div class="export-actions">
+        <button class="action-btn save-btn" id="save-btn" onclick="saveToDb()" style="display:none">&#43; Save to Database</button>
+        <button class="action-btn validate-btn" id="validate-btn" onclick="runValidate()">&#10003; Validate Emails</button>
+        <button class="action-btn" onclick="exportFile('csv')">&#8595; CSV</button>
+        <button class="action-btn" onclick="exportFile('pdf')">&#8595; PDF</button>
+      </div>
     </div>
 
-    <div class="table-wrap" id="table-wrap" style="display:none">
-      <table id="leads-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Business</th>
-            <th>Location</th>
-            <th>Contact</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Quality</th>
-            <th>Notes</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="leads-tbody"></tbody>
-      </table>
+    <!-- Results panel -->
+    <div class="panel" id="results-panel">
+      <div class="loading-state" id="loading-state">
+        <div class="spinner"></div>
+        <div class="loading-text">
+          <strong id="loading-label">Searching…</strong>
+          <span id="loading-sub">Leads will appear as they're found.</span>
+          <span class="live-count" id="live-count"></span>
+        </div>
+      </div>
+
+      <div class="empty-state" id="empty-state">
+        <div class="icon">&#128270;</div>
+        <strong>Ready to search</strong>
+        <p>Pick an industry and location, then hit Scrape Leads.</p>
+      </div>
+
+      <div class="table-wrap" id="table-wrap" style="display:none">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Business</th>
+              <th>Location</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Ads</th>
+              <th>Quality</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
+
+  </div><!-- /tab-search -->
+
+  <!-- ── TAB: Saved Leads ── -->
+  <div id="tab-saved" class="tab-pane">
+    <div class="panel">
+      <div class="panel-title">Database Overview</div>
+      <div class="db-stats" id="db-stats">
+        <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-qualified">—</div><div class="stat-label">Qualified</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#60a5fa" id="stat-contacted">—</div><div class="stat-label">Contacted</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#94a3b8" id="stat-new">—</div><div class="stat-label">New</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#ef4444" id="stat-disqualified">—</div><div class="stat-label">Disqualified</div></div>
+      </div>
+    </div>
+
+    <div class="db-actions">
+      <button class="action-btn" onclick="loadSavedLeads()">&#8635; Refresh</button>
+      <a class="action-btn" href="/api/leads/export/csv">&#8595; Export All CSV</a>
+    </div>
+
+    <div class="panel" id="saved-panel">
+      <div class="empty-state" id="saved-empty">
+        <div class="icon">&#128190;</div>
+        <strong>No saved leads yet</strong>
+        <p>Run a search and click "Save to Database".</p>
+      </div>
+      <div class="table-wrap" id="saved-table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Business</th>
+              <th>Location</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Quality</th>
+              <th>Status</th>
+              <th>Saved</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="saved-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-saved -->
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
   let leads = [];
   let currentIndustry = '';
   let currentLocation = '';
+  let savedLeadsLoaded = false;
+  let activeSource = null;
 
-  async function runScrape() {
+  // ── Tab system ─────────────────────────────────────────────────────────────
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab-btn[onclick*="${name}"]`).classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+
+    if (name === 'saved' && !savedLeadsLoaded) {
+      savedLeadsLoaded = true;
+      loadSavedLeads();
+    }
+  }
+
+  // ── Scraping (SSE) ─────────────────────────────────────────────────────────
+
+  function runScrape() {
     const industry = document.getElementById('sel-industry').value;
     const location = document.getElementById('sel-location').value;
     const count = parseInt(document.getElementById('inp-count').value) || 15;
     const validate = document.getElementById('chk-validate').checked;
 
-    if (!industry || !location) {
-      showToast('Please select an industry and location.', 'error');
-      return;
-    }
+    if (!industry || !location) { showToast('Select an industry and location.', 'error'); return; }
+
+    if (activeSource) { activeSource.close(); activeSource = null; }
 
     currentIndustry = industry;
     currentLocation = location;
+    leads = [];
 
-    setLoading(true, validate
-      ? `Scraping ${industry} in ${location}…`
-      : `Scraping ${industry} in ${location}…`,
-      validate
-        ? 'Scraping then validating emails. This may take 1–2 minutes.'
-        : 'This takes 30–90 seconds. Hang tight.'
-    );
+    setLoading(true, `Searching for ${industry} in ${location}…`, 'Leads will appear as they\'re found.');
     hideError();
-    hideResults();
+    document.getElementById('table-wrap').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'none';
+    document.getElementById('save-btn').style.display = 'none';
+    document.getElementById('leads-tbody').innerHTML = '';
+    document.getElementById('live-count').textContent = '';
 
-    try {
-      const resp = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry, location, count }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Scrape failed');
+    const url = new URL('/api/scrape-stream', window.location.origin);
+    url.searchParams.set('industry', industry);
+    url.searchParams.set('location', location);
+    url.searchParams.set('count', count);
 
-      leads = data.leads || [];
+    const source = new EventSource(url.toString());
+    activeSource = source;
 
-      if (validate && leads.length > 0) {
-        setLoading(true, 'Validating emails…', 'Checking MX records and SMTP. Almost done.');
-        leads = await validateEmails(leads);
+    source.onmessage = async (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data._done) {
+        source.close();
+        activeSource = null;
+        setLoading(false);
+
+        if (leads.length === 0) {
+          document.getElementById('empty-state').innerHTML = `
+            <div class="icon">&#128683;</div>
+            <strong>No leads found</strong>
+            <p>Try a different industry, location, or increase the count.</p>`;
+          document.getElementById('empty-state').style.display = 'block';
+        } else {
+          if (validate) {
+            await runValidate();
+          }
+          document.getElementById('save-btn').style.display = 'flex';
+          showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
+        }
+        return;
       }
 
-      renderLeads();
-      showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
-    } catch (err) {
-      showError(err.message);
-    } finally {
+      if (data.error) {
+        source.close();
+        activeSource = null;
+        setLoading(false);
+        showError(data.error);
+        return;
+      }
+
+      leads.push(data);
+      appendLeadRow(data, leads.length - 1);
+      document.getElementById('table-wrap').style.display = 'block';
+      document.getElementById('status-bar').style.display = 'flex';
+      document.getElementById('live-count').textContent = `${leads.length} found so far…`;
+      updateStatusCounts();
+    };
+
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) return;
+      source.close();
+      activeSource = null;
       setLoading(false);
-    }
+      if (leads.length === 0) showError('Connection lost. Please try again.');
+    };
   }
+
+  // ── Validate emails ────────────────────────────────────────────────────────
 
   async function runValidate() {
     if (leads.length === 0) return;
@@ -521,7 +423,14 @@
     btn.disabled = true;
     btn.textContent = 'Validating…';
     try {
-      leads = await validateEmails(leads);
+      const resp = await fetch('/api/validate-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leads }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Validation failed');
+      leads = data.leads || leads;
       renderLeads();
       showToast('Email validation complete.', 'success');
     } catch (err) {
@@ -532,16 +441,26 @@
     }
   }
 
-  async function validateEmails(leadsArr) {
-    const resp = await fetch('/api/validate-emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ leads: leadsArr }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Validation failed');
-    return data.leads || leadsArr;
+  // ── Save to database ───────────────────────────────────────────────────────
+
+  async function saveToDb() {
+    if (leads.length === 0) return;
+    try {
+      const resp = await fetch('/api/leads/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leads }),
+      });
+      const data = await resp.json();
+      showToast(`Saved ${data.saved} leads. ${data.skipped} duplicate(s) skipped.`, 'success');
+      loadDbBadge();
+      savedLeadsLoaded = false; // force refresh on next tab switch
+    } catch (err) {
+      showError(err.message);
+    }
   }
+
+  // ── Export session results ─────────────────────────────────────────────────
 
   async function exportFile(format) {
     if (leads.length === 0) return;
@@ -555,9 +474,7 @@
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `malcolm-leads.${format}`;
-      a.click();
+      a.href = url; a.download = `malcolm-leads.${format}`; a.click();
       URL.revokeObjectURL(url);
       showToast(`${format.toUpperCase()} downloaded.`, 'success');
     } catch (err) {
@@ -565,76 +482,185 @@
     }
   }
 
-  function removeLead(idx) {
-    leads.splice(idx, 1);
-    renderLeads();
+  // ── Render helpers (search tab) ────────────────────────────────────────────
+
+  function appendLeadRow(lead, i) {
+    const tbody = document.getElementById('leads-tbody');
+    const tr = document.createElement('tr');
+    tr.id = `row-${i}`;
+    tr.innerHTML = leadRowHTML(lead, i);
+    tbody.appendChild(tr);
   }
 
   function renderLeads() {
     const tbody = document.getElementById('leads-tbody');
     tbody.innerHTML = '';
-
-    if (leads.length === 0) {
-      document.getElementById('table-wrap').style.display = 'none';
-      document.getElementById('empty-state').style.display = 'block';
-      document.getElementById('empty-state').innerHTML = `
-        <div class="icon">&#128683;</div>
-        <strong>No leads found</strong>
-        <p>Try a different industry, location, or increase the count.</p>`;
-      document.getElementById('status-bar').style.display = 'none';
-      return;
-    }
-
     leads.forEach((lead, i) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="color:#475569;width:32px">${i + 1}</td>
-        <td>
-          <span class="business-name">${esc(lead.business_name || '—')}</span>
-          <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
-        </td>
-        <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
-        <td class="contact-cell">${lead.contact_name ? esc(lead.contact_name) : '<span class="empty-val">—</span>'}</td>
-        <td>
-          <div class="email-cell">
-            ${emailStatusIcon(lead.email_valid)}
-            <span>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
-          </div>
-        </td>
-        <td class="phone-cell">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
-        <td><span class="quality-badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
-        <td class="notes-cell">${esc(lead.notes || '—')}</td>
-        <td><button class="remove-btn" onclick="removeLead(${i})" title="Remove lead">&#10005;</button></td>
-      `;
+      tr.id = `row-${i}`;
+      tr.innerHTML = leadRowHTML(lead, i);
       tbody.appendChild(tr);
     });
+    updateStatusCounts();
+    if (leads.length === 0) {
+      document.getElementById('table-wrap').style.display = 'none';
+      document.getElementById('status-bar').style.display = 'none';
+    }
+  }
 
-    document.getElementById('table-wrap').style.display = 'block';
-    document.getElementById('empty-state').style.display = 'none';
+  function leadRowHTML(lead, i) {
+    const adsBadge = lead.has_google_ads
+      ? '<span class="badge ads" title="Running Google Ads">Ads</span>' : '—';
+    return `
+      <td style="color:#475569;width:32px">${i + 1}</td>
+      <td>
+        <span class="business-name">${esc(lead.business_name || '—')}</span>
+        <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
+      </td>
+      <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
+      <td>${lead.contact_name ? esc(lead.contact_name) : '<span class="empty-val">—</span>'}</td>
+      <td>
+        <div class="email-cell">
+          ${evIcon(lead.email_valid)}
+          <span>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
+        </div>
+      </td>
+      <td style="white-space:nowrap">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
+      <td>${adsBadge}</td>
+      <td><span class="badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
+      <td><div class="notes-text">${esc(lead.notes || '—')}</div></td>
+      <td><button class="rm-btn" onclick="removeLead(${i})" title="Remove">&#10005;</button></td>
+    `;
+  }
 
-    // Status counts
+  function removeLead(i) {
+    leads.splice(i, 1);
+    renderLeads();
+    if (leads.length === 0) document.getElementById('save-btn').style.display = 'none';
+  }
+
+  function updateStatusCounts() {
     const high = leads.filter(l => l.quality === 'High').length;
     const mod  = leads.filter(l => l.quality === 'Moderate').length;
     const low  = leads.filter(l => l.quality === 'Low').length;
-
     document.getElementById('status-counts').innerHTML = `
       <span class="count-pill total">${leads.length} total</span>
       ${high ? `<span class="count-pill high">${high} High</span>` : ''}
       ${mod  ? `<span class="count-pill moderate">${mod} Moderate</span>` : ''}
       ${low  ? `<span class="count-pill low">${low} Low</span>` : ''}
     `;
-    document.getElementById('status-bar').style.display = 'flex';
   }
 
-  function emailStatusIcon(status) {
-    if (!status) return '';
-    const map = {
-      valid:      '<span class="email-status valid" title="Email verified">&#10003;</span>',
-      invalid:    '<span class="email-status invalid" title="Email invalid — removed">&#10005;</span>',
-      unverified: '<span class="email-status unverified" title="Domain valid, mailbox unconfirmed">&#63;</span>',
-    };
-    return map[status] || '';
+  // ── Saved Leads tab ────────────────────────────────────────────────────────
+
+  async function loadSavedLeads() {
+    try {
+      const [leadsResp, statsResp] = await Promise.all([
+        fetch('/api/leads'),
+        fetch('/api/leads/stats'),
+      ]);
+      const { leads: saved } = await leadsResp.json();
+      const stats = await statsResp.json();
+
+      renderSavedLeads(saved);
+      renderDbStats(stats);
+      loadDbBadge(stats.total);
+    } catch (err) {
+      showToast('Failed to load saved leads.', 'error');
+    }
   }
+
+  function renderSavedLeads(saved) {
+    const tbody = document.getElementById('saved-tbody');
+    const wrap  = document.getElementById('saved-table-wrap');
+    const empty = document.getElementById('saved-empty');
+
+    if (!saved.length) {
+      wrap.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+
+    tbody.innerHTML = saved.map((lead, i) => `
+      <tr>
+        <td style="color:#475569;width:32px">${i + 1}</td>
+        <td>
+          <span class="business-name">${esc(lead.business_name || '—')}</span>
+          <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
+        </td>
+        <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
+        <td>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</td>
+        <td style="white-space:nowrap">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
+        <td><span class="badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
+        <td>
+          <select class="status-select ${esc(lead.status)}"
+            onchange="updateLeadStatus(${lead.id}, this.value); this.className='status-select '+this.value">
+            <option value="new"          ${lead.status==='new'          ?'selected':''}>New</option>
+            <option value="contacted"    ${lead.status==='contacted'    ?'selected':''}>Contacted</option>
+            <option value="qualified"    ${lead.status==='qualified'    ?'selected':''}>Qualified</option>
+            <option value="disqualified" ${lead.status==='disqualified' ?'selected':''}>Disqualified</option>
+          </select>
+        </td>
+        <td style="font-size:11px;color:#475569;white-space:nowrap">${fmtDate(lead.created_at)}</td>
+        <td><button class="rm-btn" onclick="deleteSavedLead(${lead.id}, this)" title="Delete">&#10005;</button></td>
+      </tr>
+    `).join('');
+
+    wrap.style.display = 'block';
+    empty.style.display = 'none';
+  }
+
+  function renderDbStats(stats) {
+    const s = stats.by_status || {};
+    const safe = (k) => s[k] || 0;
+    document.getElementById('stat-total').textContent       = stats.total || 0;
+    document.getElementById('stat-new').textContent         = safe('new');
+    document.getElementById('stat-contacted').textContent   = safe('contacted');
+    document.getElementById('stat-qualified').textContent   = safe('qualified');
+    document.getElementById('stat-disqualified').textContent = safe('disqualified');
+  }
+
+  async function updateLeadStatus(id, status) {
+    try {
+      await fetch(`/api/leads/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const statsResp = await fetch('/api/leads/stats');
+      renderDbStats(await statsResp.json());
+    } catch (err) {
+      showToast('Failed to update status.', 'error');
+    }
+  }
+
+  async function deleteSavedLead(id, btn) {
+    if (!confirm('Remove this lead from the database?')) return;
+    try {
+      await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+      btn.closest('tr').remove();
+      showToast('Lead removed.', '');
+      const statsResp = await fetch('/api/leads/stats');
+      const stats = await statsResp.json();
+      renderDbStats(stats);
+      loadDbBadge(stats.total);
+    } catch (err) {
+      showToast('Failed to delete lead.', 'error');
+    }
+  }
+
+  async function loadDbBadge(total) {
+    if (total === undefined) {
+      const resp = await fetch('/api/leads/stats');
+      const data = await resp.json();
+      total = data.total || 0;
+    }
+    const badge = document.getElementById('db-badge');
+    badge.textContent = total;
+    badge.classList.toggle('has-data', total > 0);
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
 
   function setLoading(on, label = '', sub = '') {
     const btn = document.getElementById('scrape-btn');
@@ -642,16 +668,10 @@
     btn.disabled = on;
     btn.textContent = on ? 'Scraping…' : 'Scrape Leads';
     ls.classList.toggle('visible', on);
-    document.getElementById('empty-state').style.display = on ? 'none' : '';
     if (on) {
       document.getElementById('loading-label').textContent = label;
       document.getElementById('loading-sub').textContent = sub;
     }
-  }
-
-  function hideResults() {
-    document.getElementById('table-wrap').style.display = 'none';
-    document.getElementById('status-bar').style.display = 'none';
   }
 
   function showError(msg) {
@@ -670,21 +690,34 @@
     t.textContent = msg;
     t.className = 'toast show' + (type ? ' ' + type : '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3500);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  function evIcon(status) {
+    if (!status) return '';
+    return {
+      valid:      '<span class="ev valid" title="Email verified">&#10003;</span>',
+      invalid:    '<span class="ev invalid" title="Invalid — removed">&#10005;</span>',
+      unverified: '<span class="ev unverified" title="Domain ok, mailbox unconfirmed">?</span>',
+    }[status] || '';
   }
 
   function esc(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function shortUrl(url) {
-    if (!url) return '';
-    try { return new URL(url).hostname.replace('www.', ''); }
-    catch { return url; }
+    try { return new URL(url).hostname.replace('www.', ''); } catch { return url || ''; }
   }
+
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return isNaN(d) ? ts : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Init
+  loadDbBadge();
 </script>
 </body>
 </html>

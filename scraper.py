@@ -1,12 +1,15 @@
-import re
-import time
+import queue
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urlparse
+import re
+import threading
+import time
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
+
+from yp_scraper import search_yellow_pages
 
 SKIP_DOMAINS = [
     'yelp.com', 'yellowpages.com', 'bbb.org', 'facebook.com',
@@ -17,8 +20,7 @@ SKIP_DOMAINS = [
     'amazon.com', 'bing.com', 'wikipedia.org', 'reddit.com', 'quora.com',
     'indeed.com', 'glassdoor.com', 'nextdoor.com', 'craigslist.org',
     'realtor.com', 'zillow.com', 'redfin.com', 'trulia.com',
-    'healthgrades.com', 'zocdoc.com', 'vitals.com', 'yelp.com',
-    'angieslist.com', 'thumbtack.com', 'buildium.com',
+    'healthgrades.com', 'zocdoc.com', 'vitals.com',
 ]
 
 USER_AGENTS = [
@@ -39,74 +41,125 @@ def get_headers():
 def is_skip_domain(url):
     try:
         domain = urlparse(url).netloc.lower()
-        return any(skip in domain for skip in SKIP_DOMAINS)
+        return any(s in domain for s in SKIP_DOMAINS)
     except Exception:
         return True
 
 
-def scrape_leads(industry, location, count):
+# ── Candidate gathering ────────────────────────────────────────────────────────
+
+def get_candidates(industry, location, count):
+    """
+    Returns list of (url, title, prefetched) tuples.
+    Tries Yellow Pages first for structured data, then fills from DuckDuckGo.
+    prefetched dict carries YP data (name, phone, city_state) so we don't
+    re-scrape info we already have.
+    """
+    seen = set()
+    candidates = []
+
+    # Yellow Pages
+    yp_results = search_yellow_pages(industry, location, max_results=count * 2)
+    for r in yp_results:
+        url = r.get('website', '')
+        if url and url not in seen and not is_skip_domain(url):
+            seen.add(url)
+            candidates.append((url, r.get('name', ''), r))
+
+    # DuckDuckGo supplement
+    if len(candidates) < count * 2:
+        needed = count * 3
+        ddg = _search_duckduckgo(industry, location, needed)
+        for url, title in ddg:
+            if url not in seen and not is_skip_domain(url):
+                seen.add(url)
+                candidates.append((url, title, {}))
+
+    return candidates
+
+
+def _search_duckduckgo(industry, location, count):
     city = location.split(',')[0].strip()
     state = location.split(',')[1].strip() if ',' in location else ''
 
     queries = [
-        f"{industry} {city}",
-        f"{industry} company {city} {state}",
-        f"best {industry} {city} {state}",
-        f"local {industry} {city}",
-        f"{industry} near {city}",
+        f'{industry} {city}',
+        f'{industry} company {city} {state}',
+        f'best {industry} {city} {state}',
+        f'local {industry} {city}',
+        f'{industry} near {city}',
     ]
 
-    seen_urls = set()
-    candidates = []
+    results = []
+    seen = set()
 
     try:
         ddgs = DDGS()
         for query in queries:
-            if len(candidates) >= count * 3:
+            if len(results) >= count:
                 break
             try:
-                results = list(ddgs.text(query, max_results=20))
-                for r in results:
+                for r in ddgs.text(query, max_results=20):
                     url = r.get('href', '')
-                    title = r.get('title', '')
-                    if url and url not in seen_urls and not is_skip_domain(url):
-                        seen_urls.add(url)
-                        candidates.append((url, title))
+                    if url and url not in seen:
+                        seen.add(url)
+                        results.append((url, r.get('title', '')))
                 time.sleep(random.uniform(1.0, 2.0))
             except Exception:
                 continue
     except Exception:
-        return []
+        pass
 
+    return results
+
+
+# ── Streaming generator ────────────────────────────────────────────────────────
+
+def scrape_leads_stream(industry, location, count):
+    """
+    Generator that yields qualified lead dicts one by one as threads complete,
+    then yields {'_done': True} as a sentinel.
+    """
+    candidates = get_candidates(industry, location, count)
     if not candidates:
-        return []
+        yield {'_done': True, 'total': 0}
+        return
 
-    leads = []
-    lock_count = [0]
+    result_queue = queue.Queue()
+    work_items = candidates[: count * 2]
 
-    def analyze_safe(url, title):
-        result = analyze_website(url, title, industry, location)
-        return result
+    def worker(url, title, prefetched):
+        try:
+            result = analyze_website(url, title, industry, location, prefetched)
+            result_queue.put(result)
+        except Exception:
+            result_queue.put(None)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {
-            executor.submit(analyze_safe, url, title): url
-            for url, title in candidates[: count * 2]
-        }
-        for future in as_completed(futures):
-            if lock_count[0] >= count:
-                break
-            result = future.result()
-            if result:
-                leads.append(result)
-                lock_count[0] += 1
+    threads = []
+    for url, title, prefetched in work_items:
+        t = threading.Thread(target=worker, args=(url, title, prefetched), daemon=True)
+        t.start()
+        threads.append(t)
 
-    quality_order = {'High': 0, 'Moderate': 1, 'Low': 2}
-    leads.sort(key=lambda x: quality_order.get(x.get('quality', 'Low'), 2))
-    return leads[:count]
+    yielded = 0
+    received = 0
+
+    while received < len(threads) and yielded < count:
+        try:
+            result = result_queue.get(timeout=20)
+            received += 1
+            if result and result.get('email'):
+                yield result
+                yielded += 1
+        except queue.Empty:
+            break
+
+    yield {'_done': True, 'total': yielded}
 
 
-def analyze_website(url, title, industry, location):
+# ── Website analysis ───────────────────────────────────────────────────────────
+
+def analyze_website(url, title, industry, location, prefetched=None):
     try:
         resp = requests.get(url, headers=get_headers(), timeout=10, allow_redirects=True)
         if resp.status_code != 200:
@@ -114,42 +167,97 @@ def analyze_website(url, title, industry, location):
 
         soup = BeautifulSoup(resp.text, 'lxml')
         html = resp.text
+        pre = prefetched or {}
 
-        business_name = extract_business_name(soup, title, url)
+        business_name = pre.get('name') or extract_business_name(soup, title, url)
         email = extract_email(soup, html)
-        phone = extract_phone(soup, html)
+        phone = pre.get('phone') or extract_phone(soup, html)
         has_blog = check_blog(soup)
         contact_name = extract_contact_name(soup)
+        has_google_ads = detect_google_ads(html)
+        city_state = pre.get('city_state') or location
+
+        # Check /contact and /about only if we're still missing email or contact
+        if not email or not contact_name:
+            sub = _try_subpages(url)
+            email = email or sub.get('email')
+            phone = phone or sub.get('phone')
+            contact_name = contact_name or sub.get('contact_name')
+
+        if not email:
+            return None  # Hard filter: must have email
 
         notes = []
         if not has_blog:
-            notes.append('No blog detected — content gap opportunity')
+            notes.append('No blog — content gap opportunity')
         else:
-            notes.append('Blog present — assess content quality')
-        if not email:
-            notes.append('No public email found')
-        if not phone:
-            notes.append('No phone found on site')
+            notes.append('Blog present — assess quality')
+        if has_google_ads:
+            notes.append('Running Google Ads — actively investing in marketing')
 
         return {
             'business_name': business_name,
             'website': url,
-            'city_state': location,
+            'city_state': city_state,
             'industry': industry,
             'contact_name': contact_name or '',
-            'email': email or '',
+            'email': email,
             'email_valid': None,
             'phone': phone or '',
-            'quality': classify_lead(has_blog, email, phone, contact_name),
+            'quality': classify_lead(has_blog, email, phone, contact_name, has_google_ads),
+            'has_google_ads': has_google_ads,
             'notes': '; '.join(notes),
         }
     except Exception:
         return None
 
 
+def _try_subpages(base_url):
+    """Check /contact and /about pages for email/phone/contact_name."""
+    found = {}
+    paths = ['/contact', '/contact-us', '/about', '/about-us', '/team']
+
+    for path in paths:
+        if found.get('email') and found.get('contact_name'):
+            break
+        try:
+            resp = requests.get(
+                urljoin(base_url, path), headers=get_headers(),
+                timeout=5, allow_redirects=True,
+            )
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, 'lxml')
+                html = resp.text
+                if not found.get('email'):
+                    found['email'] = extract_email(soup, html)
+                if not found.get('phone'):
+                    found['phone'] = extract_phone(soup, html)
+                if not found.get('contact_name'):
+                    found['contact_name'] = extract_contact_name(soup)
+        except Exception:
+            continue
+
+    return found
+
+
+def detect_google_ads(html):
+    patterns = [
+        'pagead2.googlesyndication.com',
+        'adsbygoogle',
+        'google_ad_client',
+        'doubleclick.net',
+        'googleads.g.doubleclick.net',
+        'googletag.js',
+    ]
+    lower = html.lower()
+    return any(p in lower for p in patterns)
+
+
+# ── Extraction helpers ─────────────────────────────────────────────────────────
+
 def extract_business_name(soup, title, url):
-    for meta_prop in ['og:site_name', 'og:title']:
-        tag = soup.find('meta', property=meta_prop)
+    for prop in ['og:site_name', 'og:title']:
+        tag = soup.find('meta', property=prop)
         if tag and tag.get('content', '').strip():
             return tag['content'].strip()[:80]
 
@@ -161,7 +269,7 @@ def extract_business_name(soup, title, url):
 
     page_title = soup.find('title')
     if page_title:
-        t = re.sub(r'\s*[\|\-–|]\s*.+$', '', page_title.get_text(strip=True)).strip()
+        t = re.sub(r'\s*[\|\-–]\s*.+$', '', page_title.get_text(strip=True)).strip()
         if t:
             return t[:80]
 
@@ -217,15 +325,14 @@ def extract_phone(soup, html):
 
 
 def check_blog(soup):
-    blog_kw = ['/blog', '/news', '/articles', '/insights', '/resources', '/posts', '/updates']
+    kws = ['/blog', '/news', '/articles', '/insights', '/resources', '/posts', '/updates']
     for link in soup.find_all('a', href=True):
-        href = link['href'].lower()
-        if any(kw in href for kw in blog_kw):
+        if any(k in link['href'].lower() for k in kws):
             return True
     nav = soup.find(['nav', 'header'])
     if nav:
         nav_text = nav.get_text().lower()
-        if any(kw.strip('/') in nav_text for kw in blog_kw):
+        if any(k.strip('/') in nav_text for k in kws):
             return True
     return False
 
@@ -238,24 +345,26 @@ def extract_contact_name(soup):
         r'My name is ([A-Z][a-z]+ [A-Z][a-z]+)',
         r"I(?:'m| am) ([A-Z][a-z]+ [A-Z][a-z]+)[,\s]+(?:owner|founder|ceo|president)",
     ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1)
+    for pat in patterns:
+        m = re.search(pat, text)
+        if m:
+            return m.group(1)
     return None
 
 
-def classify_lead(has_blog, email, phone, contact_name):
+def classify_lead(has_blog, email, phone, contact_name, has_google_ads=False):
     score = 0
     if not has_blog:
-        score += 3  # Content gap = opportunity for ReadTomato
+        score += 3   # Content gap = opportunity for ReadTomato
     if email:
         score += 2
     if phone:
         score += 1
     if contact_name:
         score += 1
-    if score >= 5:
+    if has_google_ads:
+        score += 1   # Already investing in marketing = higher capacity
+    if score >= 6:
         return 'High'
     elif score >= 3:
         return 'Moderate'

@@ -1,9 +1,13 @@
 import io
+import json
 from datetime import date
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
+
+from db import init_db
 
 app = Flask(__name__)
+init_db()
 
 INDUSTRIES = {
     'Tier 1 — Home Services': ['Pest Control', 'HVAC', 'Electricians', 'Plumbers'],
@@ -29,6 +33,8 @@ LOCATIONS = {
 }
 
 
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+
 @app.route('/')
 def dashboard():
     today = date.today().strftime('%A, %B %d, %Y')
@@ -36,32 +42,51 @@ def dashboard():
         ('Lead Scraper', 'Malcolm AI outreach — find and qualify businesses by industry and location', '/scraper'),
         ('Lead Cultivation Tracker', 'Monitor prospects through the pipeline with status badges and follow-up reminders', '#'),
         ('HTE Prompt Comparison Tool', 'Side-by-side testing of prompt variants with scoring and notes', '#'),
-        ('Daily Briefing Generator', 'Auto-summarize Jim\'s day — meetings, tasks, priorities — into a clean digest', '#'),
-        ('Client Onboarding Progress Board', 'Visual tracker for each client\'s onboarding milestones and blockers', '#'),
+        ('Daily Briefing Generator', "Auto-summarize Jim's day — meetings, tasks, priorities — into a clean digest", '#'),
+        ('Client Onboarding Progress Board', "Visual tracker for each client's onboarding milestones and blockers", '#'),
     ]
     return render_template('dashboard.html', name='Jay', today=today, build_list=build_list)
 
+
+# ── Scraper page ───────────────────────────────────────────────────────────────
 
 @app.route('/scraper')
 def scraper():
     return render_template('scraper.html', industries=INDUSTRIES, locations=LOCATIONS)
 
 
-@app.route('/api/scrape', methods=['POST'])
-def api_scrape():
-    from scraper import scrape_leads
-    data = request.json or {}
-    industry = data.get('industry', '').strip()
-    location = data.get('location', '').strip()
-    count = max(1, min(int(data.get('count', 20)), 50))
+# ── SSE scrape stream ──────────────────────────────────────────────────────────
+
+@app.route('/api/scrape-stream')
+def api_scrape_stream():
+    from scraper import scrape_leads_stream
+
+    industry = request.args.get('industry', '').strip()
+    location = request.args.get('location', '').strip()
+    count = max(1, min(int(request.args.get('count', 15)), 50))
 
     if not industry or not location:
         return jsonify({'error': 'Industry and location are required'}), 400
 
-    leads = scrape_leads(industry, location, count)
-    leads = [l for l in leads if l.get('email')]  # email required
-    return jsonify({'leads': leads, 'count': len(leads)})
+    def generate():
+        try:
+            for lead in scrape_leads_stream(industry, location, count):
+                yield f'data: {json.dumps(lead)}\n\n'
+        except Exception as e:
+            yield f'data: {json.dumps({"error": str(e)})}\n\n'
 
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive',
+        },
+    )
+
+
+# ── Email validation ───────────────────────────────────────────────────────────
 
 @app.route('/api/validate-emails', methods=['POST'])
 def api_validate_emails():
@@ -70,17 +95,17 @@ def api_validate_emails():
     leads = data.get('leads', [])
     if not leads:
         return jsonify({'leads': []})
-    validated = validate_leads_emails(leads)
-    return jsonify({'leads': validated})
+    return jsonify({'leads': validate_leads_emails(leads)})
 
+
+# ── Export current session results ────────────────────────────────────────────
 
 @app.route('/api/export/csv', methods=['POST'])
 def api_export_csv():
     from exporter import to_csv
     leads = (request.json or {}).get('leads', [])
-    csv_bytes = to_csv(leads)
     return send_file(
-        io.BytesIO(csv_bytes),
+        io.BytesIO(to_csv(leads)),
         mimetype='text/csv',
         as_attachment=True,
         download_name='malcolm-leads.csv',
@@ -94,14 +119,63 @@ def api_export_pdf():
     leads = data.get('leads', [])
     industry = data.get('industry', 'All Industries')
     location = data.get('location', 'All Locations')
-    pdf_bytes = to_pdf(leads, industry, location)
     return send_file(
-        io.BytesIO(pdf_bytes),
+        io.BytesIO(to_pdf(leads, industry, location)),
         mimetype='application/pdf',
         as_attachment=True,
         download_name='malcolm-leads.pdf',
     )
 
 
+# ── Database routes ────────────────────────────────────────────────────────────
+
+@app.route('/api/leads/save', methods=['POST'])
+def api_save_leads():
+    from db import save_leads
+    leads = (request.json or {}).get('leads', [])
+    return jsonify(save_leads(leads))
+
+
+@app.route('/api/leads')
+def api_get_leads():
+    from db import get_all_leads
+    return jsonify({'leads': get_all_leads()})
+
+
+@app.route('/api/leads/stats')
+def api_lead_stats():
+    from db import get_stats
+    return jsonify(get_stats())
+
+
+@app.route('/api/leads/<int:lead_id>/status', methods=['PATCH'])
+def api_update_status(lead_id):
+    from db import update_status
+    status = (request.json or {}).get('status')
+    if update_status(lead_id, status):
+        return jsonify({'ok': True})
+    return jsonify({'error': 'Invalid status'}), 400
+
+
+@app.route('/api/leads/<int:lead_id>', methods=['DELETE'])
+def api_delete_lead(lead_id):
+    from db import delete_lead
+    delete_lead(lead_id)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/leads/export/csv')
+def api_db_export_csv():
+    from db import get_all_leads
+    from exporter import to_csv
+    leads = get_all_leads()
+    return send_file(
+        io.BytesIO(to_csv(leads)),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='all-leads.csv',
+    )
+
+
 if __name__ == '__main__':
-    app.run(port=3000, debug=True)
+    app.run(port=3000, debug=True, threaded=True)
