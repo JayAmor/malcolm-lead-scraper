@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — ReadTomato</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 48px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #1e2533;
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #e05252;
+    }
+
+    .date-badge {
+      font-size: 13px;
+      color: #64748b;
+      background: #1a1f2e;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #1e2533;
+    }
+
+    /* Welcome */
+    .welcome {
+      margin-bottom: 48px;
+    }
+
+    .welcome h1 {
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .welcome h1 span {
+      background: linear-gradient(135deg, #e05252, #f59e42);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .welcome p {
+      font-size: 16px;
+      color: #64748b;
+    }
+
+    /* Build list */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+
+    .build-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .build-item {
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: border-color 0.2s, transform 0.15s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .build-item:hover {
+      border-color: #e05252;
+      transform: translateX(4px);
+    }
+
+    .build-item.live { cursor: pointer; }
+    .live-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #22c55e;
+      background: #052e16; border: 1px solid #14532d;
+      border-radius: 4px; padding: 1px 6px;
+      margin-left: 8px; vertical-align: middle;
+    }
+
+    .item-number {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #e05252, #f59e42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 1px;
+    }
+
+    .item-text h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .item-text p {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid #1e2533;
+      text-align: center;
+      font-size: 12px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="header">
+      <div class="logo">ReadTomato</div>
+      <div class="date-badge">{{ today }}</div>
+    </header>
+
+    <section class="welcome">
+      <h1>Welcome back, <span>{{ name }}.</span></h1>
+      <p>Here's what's on the build list.</p>
+    </section>
+
+    <div class="section-title">Things to Build</div>
+    <ul class="build-list">
+      {% for title, description, link in build_list %}
+      <li>
+        <a href="{{ link }}" class="build-item{% if link != '#' %} live{% endif %}">
+          <div class="item-number">{{ loop.index }}</div>
+          <div class="item-text">
+            <h3>{{ title }}{% if link != '#' %}<span class="live-badge">Live</span>{% endif %}</h3>
+            <p>{{ description }}</p>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <footer class="footer">Jay's Sandbox — ReadTomato Dev Environment</footer>
+  </div>
+</body>
+</html>

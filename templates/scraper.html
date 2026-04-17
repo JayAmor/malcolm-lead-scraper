@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lead Scraper — Malcolm AI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px 24px 60px;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #1e2533;
+    }
+    .logo { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e05252; }
+    .back-link {
+      font-size: 12px; color: #64748b;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #e2e8f0; }
+
+    /* ── Page title ── */
+    .page-title { margin-bottom: 28px; }
+    .page-title h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+    .page-title h1 span {
+      background: linear-gradient(135deg, #e05252, #f59e42);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .page-title p { font-size: 13px; color: #64748b; }
+
+    /* ── Control Panel ── */
+    .panel {
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+
+    .panel-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #475569; margin-bottom: 18px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 180px;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;
+    }
+
+    select, input[type="number"] {
+      background: #0f1117;
+      border: 1px solid #1e2533;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    select:focus, input[type="number"]:focus { border-color: #e05252; }
+
+    .options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: #e05252; cursor: pointer;
+    }
+    .checkbox-label { font-size: 13px; color: #94a3b8; }
+    .checkbox-label strong { color: #e2e8f0; }
+
+    .checkbox-hint { font-size: 11px; color: #475569; margin-top: 2px; }
+
+    .scrape-btn {
+      background: linear-gradient(135deg, #e05252, #f59e42);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 11px 28px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .scrape-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .scrape-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-counts { display: flex; gap: 16px; flex-wrap: wrap; }
+
+    .count-pill {
+      font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid;
+    }
+    .count-pill.total { color: #94a3b8; border-color: #1e2533; background: #141824; }
+    .count-pill.high { color: #22c55e; border-color: #14532d; background: #052e16; }
+    .count-pill.moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
+    .count-pill.low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
+
+    .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .action-btn {
+      font-size: 12px; font-weight: 600;
+      padding: 7px 16px; border-radius: 8px;
+      border: 1px solid #1e2533;
+      background: #141824; color: #94a3b8;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .action-btn:hover { border-color: #e05252; color: #e2e8f0; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-btn.validate-btn:hover { border-color: #eab308; }
+
+    /* ── Loading ── */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .loading-state.visible { display: flex; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #1e2533;
+      border-top-color: #e05252;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-size: 14px; color: #64748b; }
+    .loading-text strong { color: #e2e8f0; }
+
+    /* ── Empty / Error states ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #475569;
+      font-size: 14px;
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { color: #64748b; }
+
+    .error-banner {
+      display: none;
+      background: #1c0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #ef4444;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Results table ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      border-bottom: 1px solid #1e2533;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a2030;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #141824; }
+
+    td {
+      padding: 12px 12px;
+      vertical-align: top;
+      color: #cbd5e1;
+      max-width: 200px;
+    }
+
+    .business-name {
+      font-weight: 600;
+      color: #e2e8f0;
+      display: block;
+    }
+    .business-link {
+      font-size: 11px;
+      color: #e05252;
+      display: block;
+      margin-top: 2px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .business-link:hover { text-decoration: underline; }
+
+    .quality-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .quality-badge.High { color: #22c55e; border-color: #14532d; background: #052e16; }
+    .quality-badge.Moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
+    .quality-badge.Low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
+
+    .email-cell { display: flex; align-items: flex-start; gap: 6px; }
+    .email-status {
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .email-status.valid { color: #22c55e; }
+    .email-status.invalid { color: #ef4444; }
+    .email-status.unverified { color: #eab308; }
+
+    .notes-cell {
+      font-size: 12px;
+      color: #64748b;
+      max-width: 220px;
+      line-height: 1.5;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .remove-btn:hover { color: #ef4444; background: #1c0a0a; }
+
+    .phone-cell, .contact-cell { white-space: nowrap; }
+
+    .empty-val { color: #334155; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: #e2e8f0;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999;
+      max-width: 300px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: #14532d; color: #22c55e; }
+    .toast.error { border-color: #7f1d1d; color: #ef4444; }
+
+    @media (max-width: 700px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">ReadTomato</div>
+    <a href="/" class="back-link">&#8592; Dashboard</a>
+  </header>
+
+  <!-- Title -->
+  <div class="page-title">
+    <h1>Malcolm AI <span>Lead Scraper</span></h1>
+    <p>Target businesses by industry and location. Qualify, validate, and export.</p>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="panel">
+    <div class="panel-title">Search Parameters</div>
+
+    <div class="controls-grid">
+      <div class="field-group">
+        <label for="sel-industry">Industry</label>
+        <select id="sel-industry">
+          <option value="" disabled selected>Select industry…</option>
+          {% for group, items in industries.items() %}
+          <optgroup label="{{ group }}">
+            {% for item in items %}
+            <option value="{{ item }}">{{ item }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="sel-location">Location</label>
+        <select id="sel-location">
+          <option value="" disabled selected>Select city…</option>
+          {% for region, cities in locations.items() %}
+          <optgroup label="{{ region }}">
+            {% for city in cities %}
+            <option value="{{ city }}">{{ city }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="inp-count">Number of Leads</label>
+        <input type="number" id="inp-count" value="15" min="1" max="50" />
+      </div>
+    </div>
+
+    <div class="options-row">
+      <div>
+        <label class="checkbox-group" for="chk-validate">
+          <input type="checkbox" id="chk-validate" />
+          <span class="checkbox-label"><strong>Validate emails</strong> after scraping</span>
+        </label>
+        <div class="checkbox-hint" style="padding-left:26px">Checks MX records + SMTP — removes emails that fail. Adds ~30s.</div>
+      </div>
+      <button class="scrape-btn" id="scrape-btn" onclick="runScrape()">Scrape Leads</button>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner" id="error-banner"></div>
+
+  <!-- Status bar + export -->
+  <div class="status-bar" id="status-bar" style="display:none">
+    <div class="status-counts" id="status-counts"></div>
+    <div class="export-actions">
+      <button class="action-btn validate-btn" id="validate-btn" onclick="runValidate()" title="Check if emails are active and remove invalid ones">
+        &#10003; Validate Emails
+      </button>
+      <button class="action-btn" onclick="exportFile('csv')">&#8595; Export CSV</button>
+      <button class="action-btn" onclick="exportFile('pdf')">&#8595; Export PDF</button>
+    </div>
+  </div>
+
+  <!-- Results panel -->
+  <div class="panel" id="results-panel">
+    <div class="loading-state" id="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">
+        <strong id="loading-label">Searching for leads…</strong><br>
+        <span id="loading-sub">This takes 30–90 seconds. Hang tight.</span>
+      </div>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="icon">&#128270;</div>
+      <strong>Ready to search</strong>
+      <p>Pick an industry and location, then hit Scrape Leads.</p>
+    </div>
+
+    <div class="table-wrap" id="table-wrap" style="display:none">
+      <table id="leads-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Business</th>
+            <th>Location</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Quality</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let leads = [];
+  let currentIndustry = '';
+  let currentLocation = '';
+
+  async function runScrape() {
+    const industry = document.getElementById('sel-industry').value;
+    const location = document.getElementById('sel-location').value;
+    const count = parseInt(document.getElementById('inp-count').value) || 15;
+    const validate = document.getElementById('chk-validate').checked;
+
+    if (!industry || !location) {
+      showToast('Please select an industry and location.', 'error');
+      return;
+    }
+
+    currentIndustry = industry;
+    currentLocation = location;
+
+    setLoading(true, validate
+      ? `Scraping ${industry} in ${location}…`
+      : `Scraping ${industry} in ${location}…`,
+      validate
+        ? 'Scraping then validating emails. This may take 1–2 minutes.'
+        : 'This takes 30–90 seconds. Hang tight.'
+    );
+    hideError();
+    hideResults();
+
+    try {
+      const resp = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry, location, count }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Scrape failed');
+
+      leads = data.leads || [];
+
+      if (validate && leads.length > 0) {
+        setLoading(true, 'Validating emails…', 'Checking MX records and SMTP. Almost done.');
+        leads = await validateEmails(leads);
+      }
+
+      renderLeads();
+      showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function runValidate() {
+    if (leads.length === 0) return;
+    const btn = document.getElementById('validate-btn');
+    btn.disabled = true;
+    btn.textContent = 'Validating…';
+    try {
+      leads = await validateEmails(leads);
+      renderLeads();
+      showToast('Email validation complete.', 'success');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✓ Validate Emails';
+    }
+  }
+
+  async function validateEmails(leadsArr) {
+    const resp = await fetch('/api/validate-emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leads: leadsArr }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Validation failed');
+    return data.leads || leadsArr;
+  }
+
+  async function exportFile(format) {
+    if (leads.length === 0) return;
+    try {
+      const resp = await fetch(`/api/export/${format}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leads, industry: currentIndustry, location: currentLocation }),
+      });
+      if (!resp.ok) throw new Error('Export failed');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `malcolm-leads.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${format.toUpperCase()} downloaded.`, 'success');
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  function removeLead(idx) {
+    leads.splice(idx, 1);
+    renderLeads();
+  }
+
+  function renderLeads() {
+    const tbody = document.getElementById('leads-tbody');
+    tbody.innerHTML = '';
+
+    if (leads.length === 0) {
+      document.getElementById('table-wrap').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'block';
+      document.getElementById('empty-state').innerHTML = `
+        <div class="icon">&#128683;</div>
+        <strong>No leads found</strong>
+        <p>Try a different industry, location, or increase the count.</p>`;
+      document.getElementById('status-bar').style.display = 'none';
+      return;
+    }
+
+    leads.forEach((lead, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:#475569;width:32px">${i + 1}</td>
+        <td>
+          <span class="business-name">${esc(lead.business_name || '—')}</span>
+          <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
+        </td>
+        <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
+        <td class="contact-cell">${lead.contact_name ? esc(lead.contact_name) : '<span class="empty-val">—</span>'}</td>
+        <td>
+          <div class="email-cell">
+            ${emailStatusIcon(lead.email_valid)}
+            <span>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
+          </div>
+        </td>
+        <td class="phone-cell">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
+        <td><span class="quality-badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
+        <td class="notes-cell">${esc(lead.notes || '—')}</td>
+        <td><button class="remove-btn" onclick="removeLead(${i})" title="Remove lead">&#10005;</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('table-wrap').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+
+    // Status counts
+    const high = leads.filter(l => l.quality === 'High').length;
+    const mod  = leads.filter(l => l.quality === 'Moderate').length;
+    const low  = leads.filter(l => l.quality === 'Low').length;
+
+    document.getElementById('status-counts').innerHTML = `
+      <span class="count-pill total">${leads.length} total</span>
+      ${high ? `<span class="count-pill high">${high} High</span>` : ''}
+      ${mod  ? `<span class="count-pill moderate">${mod} Moderate</span>` : ''}
+      ${low  ? `<span class="count-pill low">${low} Low</span>` : ''}
+    `;
+    document.getElementById('status-bar').style.display = 'flex';
+  }
+
+  function emailStatusIcon(status) {
+    if (!status) return '';
+    const map = {
+      valid:      '<span class="email-status valid" title="Email verified">&#10003;</span>',
+      invalid:    '<span class="email-status invalid" title="Email invalid — removed">&#10005;</span>',
+      unverified: '<span class="email-status unverified" title="Domain valid, mailbox unconfirmed">&#63;</span>',
+    };
+    return map[status] || '';
+  }
+
+  function setLoading(on, label = '', sub = '') {
+    const btn = document.getElementById('scrape-btn');
+    const ls  = document.getElementById('loading-state');
+    btn.disabled = on;
+    btn.textContent = on ? 'Scraping…' : 'Scrape Leads';
+    ls.classList.toggle('visible', on);
+    document.getElementById('empty-state').style.display = on ? 'none' : '';
+    if (on) {
+      document.getElementById('loading-label').textContent = label;
+      document.getElementById('loading-sub').textContent = sub;
+    }
+  }
+
+  function hideResults() {
+    document.getElementById('table-wrap').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'none';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = 'Error: ' + msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-banner').style.display = 'none';
+  }
+
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3500);
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function shortUrl(url) {
+    if (!url) return '';
+    try { return new URL(url).hostname.replace('www.', ''); }
+    catch { return url; }
+  }
+</script>
+</body>
+</html>
