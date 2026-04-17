@@ -1,6 +1,8 @@
 import io
 import json
 import os
+import queue as q_module
+import threading
 from datetime import date
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
@@ -69,12 +71,26 @@ def api_scrape_stream():
     if not industries or not location:
         return jsonify({'error': 'At least one industry and a location are required'}), 400
 
-    def generate():
+    result_q = q_module.Queue()
+
+    def run_scraper():
         try:
-            for lead in scrape_leads_stream(industries, location, count):
-                yield f'data: {json.dumps(lead)}\n\n'
+            for item in scrape_leads_stream(industries, location, count):
+                result_q.put(item)
         except Exception as e:
-            yield f'data: {json.dumps({"error": str(e)})}\n\n'
+            result_q.put({'error': str(e), '_done': True, 'total': 0})
+
+    threading.Thread(target=run_scraper, daemon=True).start()
+
+    def generate():
+        while True:
+            try:
+                item = result_q.get(timeout=20)
+                yield f'data: {json.dumps(item)}\n\n'
+                if item.get('_done') or item.get('error'):
+                    break
+            except q_module.Empty:
+                yield ': keep-alive\n\n'  # prevents Render proxy from dropping connection
 
     return Response(
         stream_with_context(generate()),

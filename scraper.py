@@ -7,9 +7,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
-
-from yp_scraper import search_yellow_pages
+from ddgs import DDGS
 
 SKIP_DOMAINS = [
     'yelp.com', 'yellowpages.com', 'bbb.org', 'facebook.com',
@@ -58,22 +56,11 @@ def get_candidates(industry, location, count):
     seen = set()
     candidates = []
 
-    # Yellow Pages
-    yp_results = search_yellow_pages(industry, location, max_results=count * 2)
-    for r in yp_results:
-        url = r.get('website', '')
-        if url and url not in seen and not is_skip_domain(url):
+    ddg = _search_duckduckgo(industry, location, count * 3)
+    for url, title in ddg:
+        if url not in seen and not is_skip_domain(url):
             seen.add(url)
-            candidates.append((url, r.get('name', ''), r))
-
-    # DuckDuckGo supplement
-    if len(candidates) < count * 2:
-        needed = count * 3
-        ddg = _search_duckduckgo(industry, location, needed)
-        for url, title in ddg:
-            if url not in seen and not is_skip_domain(url):
-                seen.add(url)
-                candidates.append((url, title, {}))
+            candidates.append((url, title, {}))
 
     return candidates
 

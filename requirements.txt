@@ -2,7 +2,7 @@ flask
 requests
 beautifulsoup4
 lxml
-duckduckgo-search
+ddgs
 dnspython
 fpdf2
 gunicorn
