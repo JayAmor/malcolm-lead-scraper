@@ -70,9 +70,7 @@ def validate_leads_emails(leads):
         lead['email_valid'] = status
 
         if status == 'invalid':
-            lead['email'] = ''
-            existing_notes = lead.get('notes', '')
-            lead['notes'] = (existing_notes + '; Email removed — failed validation').lstrip('; ')
+            lead['email'] = ''  # cleared so the filter below drops this lead
 
         return idx, lead
 
@@ -83,4 +81,5 @@ def validate_leads_emails(leads):
             idx, lead = future.result()
             results[idx] = lead
 
-    return [results[i] for i in sorted(results)]
+    ordered = [results[i] for i in sorted(results)]
+    return [l for l in ordered if l.get('email')]  # drop leads whose email failed

@@ -59,6 +59,7 @@ def api_scrape():
         return jsonify({'error': 'Industry and location are required'}), 400
 
     leads = scrape_leads(industry, location, count)
+    leads = [l for l in leads if l.get('email')]  # email required
     return jsonify({'leads': leads, 'count': len(leads)})
 
 
