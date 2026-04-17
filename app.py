@@ -62,16 +62,16 @@ def scraper():
 def api_scrape_stream():
     from scraper import scrape_leads_stream
 
-    industry = request.args.get('industry', '').strip()
+    industries = [i.strip() for i in request.args.get('industries', '').split(',') if i.strip()]
     location = request.args.get('location', '').strip()
     count = max(1, min(int(request.args.get('count', 15)), 50))
 
-    if not industry or not location:
-        return jsonify({'error': 'Industry and location are required'}), 400
+    if not industries or not location:
+        return jsonify({'error': 'At least one industry and a location are required'}), 400
 
     def generate():
         try:
-            for lead in scrape_leads_stream(industry, location, count):
+            for lead in scrape_leads_stream(industries, location, count):
                 yield f'data: {json.dumps(lead)}\n\n'
         except Exception as e:
             yield f'data: {json.dumps({"error": str(e)})}\n\n'

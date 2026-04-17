@@ -45,6 +45,22 @@
     select, input[type="number"] { background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; color: #e2e8f0; font-size: 14px; padding: 10px 14px; width: 100%; outline: none; transition: border-color .2s; -webkit-appearance: none; appearance: none; }
     select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
     select:focus, input[type="number"]:focus { border-color: #e05252; }
+
+    /* Industry chip picker */
+    .industry-section { margin-bottom: 18px; }
+    .industry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .industry-header label { margin-bottom: 0; }
+    .industry-meta { font-size: 11px; color: #475569; }
+    .industry-meta span { color: #e05252; font-weight: 700; }
+    .tier-group { margin-bottom: 10px; }
+    .tier-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #334155; margin-bottom: 6px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { background: #0f1117; border: 1px solid #1e2533; border-radius: 20px; color: #94a3b8; cursor: pointer; font-size: 12px; font-weight: 500; padding: 5px 14px; transition: border-color .15s, color .15s, background .15s; user-select: none; }
+    .chip:hover { border-color: #e05252; color: #e2e8f0; }
+    .chip.selected { background: linear-gradient(135deg,#e05252,#f59e42); border-color: transparent; color: #fff; font-weight: 600; }
+    .chip-controls { display: flex; gap: 8px; }
+    .chip-ctrl { background: none; border: none; color: #475569; font-size: 11px; cursor: pointer; padding: 2px 4px; transition: color .2s; }
+    .chip-ctrl:hover { color: #e2e8f0; }
     .options-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
     .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; accent-color: #e05252; cursor: pointer; }
@@ -166,20 +182,29 @@
 
     <div class="panel">
       <div class="panel-title">Search Parameters</div>
-      <div class="controls-grid">
-        <div class="field-group">
-          <label for="sel-industry">Industry</label>
-          <select id="sel-industry">
-            <option value="" disabled selected>Select industry…</option>
-            {% for group, items in industries.items() %}
-            <optgroup label="{{ group }}">
-              {% for item in items %}
-              <option value="{{ item }}">{{ item }}</option>
-              {% endfor %}
-            </optgroup>
-            {% endfor %}
-          </select>
+
+      <!-- Industry chip picker -->
+      <div class="industry-section">
+        <div class="industry-header">
+          <label>Industries <span class="industry-meta">— <span id="chip-count">0</span> selected</span></label>
+          <div class="chip-controls">
+            <button class="chip-ctrl" onclick="selectAllChips()">Select All</button>
+            <button class="chip-ctrl" onclick="clearChips()">Clear</button>
+          </div>
         </div>
+        {% for group, items in industries.items() %}
+        <div class="tier-group">
+          <div class="tier-label">{{ group }}</div>
+          <div class="chip-row">
+            {% for item in items %}
+            <div class="chip" data-value="{{ item }}" onclick="toggleChip(this)">{{ item }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="controls-grid" style="grid-template-columns:1fr 180px;">
         <div class="field-group">
           <label for="sel-location">Location</label>
           <select id="sel-location">
@@ -335,21 +360,39 @@
 
   // ── Scraping (SSE) ─────────────────────────────────────────────────────────
 
+  function toggleChip(el) {
+    el.classList.toggle('selected');
+    document.getElementById('chip-count').textContent =
+      document.querySelectorAll('.chip.selected').length;
+  }
+  function selectAllChips() {
+    document.querySelectorAll('.chip').forEach(c => c.classList.add('selected'));
+    document.getElementById('chip-count').textContent = document.querySelectorAll('.chip').length;
+  }
+  function clearChips() {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('chip-count').textContent = 0;
+  }
+  function getSelectedIndustries() {
+    return [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
+  }
+
   function runScrape() {
-    const industry = document.getElementById('sel-industry').value;
+    const industries = getSelectedIndustries();
     const location = document.getElementById('sel-location').value;
     const count = parseInt(document.getElementById('inp-count').value) || 15;
     const validate = document.getElementById('chk-validate').checked;
 
-    if (!industry || !location) { showToast('Select an industry and location.', 'error'); return; }
+    if (!industries.length || !location) { showToast('Select at least one industry and a location.', 'error'); return; }
 
     if (activeSource) { activeSource.close(); activeSource = null; }
 
-    currentIndustry = industry;
+    currentIndustry = industries.join(', ');
     currentLocation = location;
     leads = [];
 
-    setLoading(true, `Searching for ${industry} in ${location}…`, 'Leads will appear as they\'re found.');
+    const label = industries.length === 1 ? industries[0] : `${industries.length} industries`;
+    setLoading(true, `Searching for ${label} in ${location}…`, 'Leads will appear as they\'re found.');
     hideError();
     document.getElementById('table-wrap').style.display = 'none';
     document.getElementById('empty-state').style.display = 'none';
@@ -359,7 +402,7 @@
     document.getElementById('live-count').textContent = '';
 
     const url = new URL('/api/scrape-stream', window.location.origin);
-    url.searchParams.set('industry', industry);
+    url.searchParams.set('industries', industries.join(','));
     url.searchParams.set('location', location);
     url.searchParams.set('count', count);
 

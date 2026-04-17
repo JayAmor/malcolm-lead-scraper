@@ -115,29 +115,42 @@ def _search_duckduckgo(industry, location, count):
 
 # ── Streaming generator ────────────────────────────────────────────────────────
 
-def scrape_leads_stream(industry, location, count):
+def scrape_leads_stream(industries, location, count):
     """
     Generator that yields qualified lead dicts one by one as threads complete,
     then yields {'_done': True} as a sentinel.
+    industries is a list of one or more industry strings.
     """
-    candidates = get_candidates(industry, location, count)
-    if not candidates:
+    if isinstance(industries, str):
+        industries = [industries]
+
+    seen = set()
+    all_candidates = []  # (url, title, prefetched, industry_label)
+
+    per = max(5, count // len(industries))
+    for industry in industries:
+        for url, title, prefetched in get_candidates(industry, location, per):
+            if url not in seen:
+                seen.add(url)
+                all_candidates.append((url, title, prefetched, industry))
+
+    if not all_candidates:
         yield {'_done': True, 'total': 0}
         return
 
     result_queue = queue.Queue()
-    work_items = candidates[: count * 2]
+    work_items = all_candidates[: count * 2]
 
-    def worker(url, title, prefetched):
+    def worker(url, title, prefetched, industry_label):
         try:
-            result = analyze_website(url, title, industry, location, prefetched)
+            result = analyze_website(url, title, industry_label, location, prefetched)
             result_queue.put(result)
         except Exception:
             result_queue.put(None)
 
     threads = []
-    for url, title, prefetched in work_items:
-        t = threading.Thread(target=worker, args=(url, title, prefetched), daemon=True)
+    for url, title, prefetched, industry_label in work_items:
+        t = threading.Thread(target=worker, args=(url, title, prefetched, industry_label), daemon=True)
         t.start()
         threads.append(t)
 
