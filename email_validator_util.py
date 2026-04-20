@@ -1,6 +1,5 @@
 import re
 import smtplib
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import dns.resolver
 
@@ -54,32 +53,19 @@ def validate_email(email):
 
 def validate_leads_emails(leads):
     """
-    Validate all lead emails concurrently.
-    Removes emails that fail validation and notes it.
+    Validate all lead emails sequentially (no threading — gevent-safe).
+    Removes leads whose email fails validation.
     """
-    indexed = list(enumerate(leads))
-
-    def validate_one(idx_lead):
-        idx, lead = idx_lead
+    result = []
+    for lead in leads:
         email = lead.get('email', '')
         if not email:
             lead['email_valid'] = None
-            return idx, lead
-
-        status = validate_email(email)
-        lead['email_valid'] = status
-
-        if status == 'invalid':
-            lead['email'] = ''  # cleared so the filter below drops this lead
-
-        return idx, lead
-
-    results = {}
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {executor.submit(validate_one, item): item[0] for item in indexed}
-        for future in as_completed(futures):
-            idx, lead = future.result()
-            results[idx] = lead
-
-    ordered = [results[i] for i in sorted(results)]
-    return [l for l in ordered if l.get('email')]  # drop leads whose email failed
+        else:
+            status = validate_email(email)
+            lead['email_valid'] = status
+            if status == 'invalid':
+                lead['email'] = ''
+        if lead.get('email'):
+            result.append(lead)
+    return result

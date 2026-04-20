@@ -485,7 +485,12 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leads }),
       });
-      const data = await resp.json();
+      let data;
+      try {
+        data = await resp.json();
+      } catch (e) {
+        throw new Error('Validation service error. Please try again.');
+      }
       if (!resp.ok) throw new Error(data.error || 'Validation failed');
       leads = data.leads || leads;
       renderLeads();
