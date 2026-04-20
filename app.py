@@ -110,12 +110,15 @@ def poll_job(job_id):
 
 @app.route('/api/validate-emails', methods=['POST'])
 def api_validate_emails():
-    from email_validator_util import validate_leads_emails
-    data = request.json or {}
-    leads = data.get('leads', [])
-    if not leads:
-        return jsonify({'leads': []})
-    return jsonify({'leads': validate_leads_emails(leads)})
+    try:
+        from email_validator_util import validate_leads_emails
+        data = request.json or {}
+        leads = data.get('leads', [])
+        if not leads:
+            return jsonify({'leads': []})
+        return jsonify({'leads': validate_leads_emails(leads)})
+    except Exception as e:
+        return jsonify({'error': str(e), 'leads': []}), 500
 
 
 # ── Export current session results ────────────────────────────────────────────

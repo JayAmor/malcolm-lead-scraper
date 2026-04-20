@@ -1,5 +1,4 @@
 import re
-import smtplib
 
 import dns.resolver
 
@@ -12,26 +11,13 @@ def _check_mx(domain):
         return False
 
 
-def _smtp_verify(email, domain):
-    """Returns True (valid), False (invalid), or None (inconclusive — server blocked)."""
-    try:
-        records = dns.resolver.resolve(domain, 'MX', lifetime=5)
-        mx = sorted(records, key=lambda r: r.preference)[0].exchange.to_text().rstrip('.')
-        with smtplib.SMTP(timeout=8) as server:
-            server.connect(mx, 25)
-            server.helo('mail.verify-check.com')
-            server.mail('check@verify-check.com')
-            code, _ = server.rcpt(email)
-            return code == 250
-    except Exception:
-        return None
-
-
 def validate_email(email):
     """
     Returns 'valid', 'invalid', or 'unverified'.
-    'unverified' means MX records exist but SMTP verification was blocked —
-    the email domain is real but the mailbox couldn't be confirmed.
+    Checks format + MX record existence. SMTP port 25 is blocked on most cloud
+    hosts (including Render), so we skip it — MX check is the reliable signal.
+    'valid'     = format ok + MX records found
+    'invalid'   = bad format or no MX records (domain can't receive email)
     """
     if not email or '@' not in email:
         return 'invalid'
@@ -39,22 +25,13 @@ def validate_email(email):
         return 'invalid'
 
     domain = email.split('@')[1].lower()
-
-    if not _check_mx(domain):
-        return 'invalid'
-
-    result = _smtp_verify(email, domain)
-    if result is True:
-        return 'valid'
-    elif result is False:
-        return 'invalid'
-    return 'unverified'  # MX ok, SMTP blocked — likely real
+    return 'valid' if _check_mx(domain) else 'invalid'
 
 
 def validate_leads_emails(leads):
     """
-    Validate all lead emails sequentially (no threading — gevent-safe).
-    Removes leads whose email fails validation.
+    Validate all lead emails sequentially (gevent-safe, no threading).
+    Removes leads whose email domain has no MX records.
     """
     result = []
     for lead in leads:
