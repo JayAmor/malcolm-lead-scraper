@@ -6,3 +6,4 @@ ddgs
 dnspython
 fpdf2
 gunicorn
+gevent

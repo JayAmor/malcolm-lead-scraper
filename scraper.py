@@ -91,7 +91,7 @@ def _search_duckduckgo(industry, location, count):
                     if url and url not in seen:
                         seen.add(url)
                         results.append((url, r.get('title', '')))
-                time.sleep(random.uniform(1.0, 2.0))
+                time.sleep(random.uniform(0.5, 1.0))
             except Exception:
                 continue
     except Exception:
@@ -161,7 +161,7 @@ def scrape_leads_stream(industries, location, count):
 
 def analyze_website(url, title, industry, location, prefetched=None):
     try:
-        resp = requests.get(url, headers=get_headers(), timeout=10, allow_redirects=True)
+        resp = requests.get(url, headers=get_headers(), timeout=7, allow_redirects=True)
         if resp.status_code != 200:
             return None
 
@@ -223,7 +223,7 @@ def _try_subpages(base_url):
         try:
             resp = requests.get(
                 urljoin(base_url, path), headers=get_headers(),
-                timeout=5, allow_redirects=True,
+                timeout=3, allow_redirects=True,
             )
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'lxml')
