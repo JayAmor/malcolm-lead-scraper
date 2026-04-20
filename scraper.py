@@ -125,6 +125,15 @@ def _search_duckduckgo(industry, location, count):
 
 # ── Streaming generator ────────────────────────────────────────────────────────
 
+def _root_domain(url):
+    try:
+        host = urlparse(url).netloc.lower().replace('www.', '')
+        parts = host.split('.')
+        return '.'.join(parts[-2:]) if len(parts) >= 2 else host
+    except Exception:
+        return url
+
+
 def scrape_leads_stream(industries, location, count):
     """
     Generator that yields qualified lead dicts one by one as threads complete,
@@ -134,14 +143,17 @@ def scrape_leads_stream(industries, location, count):
     if isinstance(industries, str):
         industries = [industries]
 
-    seen = set()
+    seen_urls = set()
+    seen_domains = set()
     all_candidates = []  # (url, title, prefetched, industry_label)
 
     per = max(5, count // len(industries))
     for industry in industries:
         for url, title, prefetched in get_candidates(industry, location, per):
-            if url not in seen:
-                seen.add(url)
+            domain = _root_domain(url)
+            if url not in seen_urls and domain not in seen_domains:
+                seen_urls.add(url)
+                seen_domains.add(domain)
                 all_candidates.append((url, title, prefetched, industry))
 
     if not all_candidates:

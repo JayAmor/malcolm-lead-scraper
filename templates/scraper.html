@@ -147,6 +147,21 @@
 
     .db-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+    .filter-bar input[type="text"] { background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; color: #e2e8f0; font-size: 13px; padding: 8px 12px; flex: 1; min-width: 180px; outline: none; transition: border-color .2s; }
+    .filter-bar input[type="text"]:focus { border-color: #e05252; }
+    .filter-bar select { background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; color: #94a3b8; font-size: 12px; padding: 8px 28px 8px 10px; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; cursor: pointer; -webkit-appearance: none; appearance: none; }
+    .filter-count { font-size: 11px; color: #475569; white-space: nowrap; }
+
+    /* Session restore banner */
+    .session-banner { background: #0d1929; border: 1px solid #1e3a5f; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .session-banner-text strong { display: block; font-size: 13px; color: #60a5fa; margin-bottom: 2px; }
+    .session-banner-text span { font-size: 11px; color: #475569; }
+    .session-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .session-btn { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 7px; border: 1px solid #1e3a5f; background: #141824; color: #60a5fa; cursor: pointer; }
+    .session-btn.dismiss { color: #475569; border-color: #1e2533; }
+
     /* Toast */
     .toast { position: fixed; bottom: 24px; right: 24px; background: #141824; border: 1px solid #1e2533; border-radius: 10px; padding: 12px 18px; font-size: 13px; color: #e2e8f0; opacity: 0; transform: translateY(10px); transition: opacity .25s, transform .25s; z-index: 999; max-width: 320px; }
     .toast.show { opacity: 1; transform: translateY(0); }
@@ -179,6 +194,17 @@
 
   <!-- ── TAB: Search ── -->
   <div id="tab-search" class="tab-pane active">
+
+    <div class="session-banner" id="session-banner" style="display:none">
+      <div class="session-banner-text">
+        <strong>Last session results available</strong>
+        <span id="session-banner-sub"></span>
+      </div>
+      <div class="session-banner-actions">
+        <button class="session-btn" onclick="restoreSession()">Restore</button>
+        <button class="session-btn dismiss" onclick="dismissSession()">Dismiss</button>
+      </div>
+    </div>
 
     <div class="panel">
       <div class="panel-title">Search Parameters</div>
@@ -292,18 +318,43 @@
   <div id="tab-saved" class="tab-pane">
     <div class="panel">
       <div class="panel-title">Database Overview</div>
-      <div class="db-stats" id="db-stats">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:8px">By Status</div>
+      <div class="db-stats" id="db-stats" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-qualified">—</div><div class="stat-label">Qualified</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#60a5fa" id="stat-contacted">—</div><div class="stat-label">Contacted</div></div>
         <div class="stat-card"><div class="stat-num" style="color:#94a3b8" id="stat-new">—</div><div class="stat-label">New</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#60a5fa" id="stat-contacted">—</div><div class="stat-label">Contacted</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-qualified">—</div><div class="stat-label">Qualified</div></div>
         <div class="stat-card"><div class="stat-num" style="color:#ef4444" id="stat-disqualified">—</div><div class="stat-label">Disqualified</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:8px">By Quality</div>
+      <div class="db-stats">
+        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-high">—</div><div class="stat-label">High</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#eab308" id="stat-moderate">—</div><div class="stat-label">Moderate</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#ef4444" id="stat-low">—</div><div class="stat-label">Low</div></div>
       </div>
     </div>
 
     <div class="db-actions">
       <button class="action-btn" onclick="loadSavedLeads()">&#8635; Refresh</button>
       <a class="action-btn" href="/api/leads/export/csv">&#8595; Export All CSV</a>
+    </div>
+
+    <div class="filter-bar" id="saved-filter-bar" style="display:none">
+      <input type="text" id="filter-text" placeholder="Search by name or email…" oninput="filterSavedLeads()">
+      <select id="filter-quality" onchange="filterSavedLeads()">
+        <option value="">All Quality</option>
+        <option value="High">High</option>
+        <option value="Moderate">Moderate</option>
+        <option value="Low">Low</option>
+      </select>
+      <select id="filter-status" onchange="filterSavedLeads()">
+        <option value="">All Status</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="qualified">Qualified</option>
+        <option value="disqualified">Disqualified</option>
+      </select>
+      <span class="filter-count" id="filter-count"></span>
     </div>
 
     <div class="panel" id="saved-panel">
@@ -339,6 +390,7 @@
 
 <script>
   let leads = [];
+  let allSavedLeads = [];
   let currentIndustry = '';
   let currentLocation = '';
   let savedLeadsLoaded = false;
@@ -456,6 +508,7 @@
             document.getElementById('empty-state').style.display = 'block';
           } else {
             if (validate) await runValidate();
+            saveSession(leads, currentIndustry, currentLocation);
             document.getElementById('save-btn').style.display = 'flex';
             document.getElementById('live-count').textContent = '';
             showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
@@ -515,8 +568,12 @@
       });
       const data = await resp.json();
       showToast(`Saved ${data.saved} leads. ${data.skipped} duplicate(s) skipped.`, 'success');
-      loadDbBadge();
-      savedLeadsLoaded = false; // force refresh on next tab switch
+      savedLeadsLoaded = false;
+      if (document.getElementById('tab-saved').classList.contains('active')) {
+        loadSavedLeads();
+      } else {
+        loadDbBadge();
+      }
     } catch (err) {
       showError(err.message);
     }
@@ -633,6 +690,12 @@
   }
 
   function renderSavedLeads(saved) {
+    allSavedLeads = saved;
+    document.getElementById('saved-filter-bar').style.display = saved.length ? 'flex' : 'none';
+    _renderSavedTable(saved);
+  }
+
+  function _renderSavedTable(saved) {
     const tbody = document.getElementById('saved-tbody');
     const wrap  = document.getElementById('saved-table-wrap');
     const empty = document.getElementById('saved-empty');
@@ -640,8 +703,13 @@
     if (!saved.length) {
       wrap.style.display = 'none';
       empty.style.display = 'block';
+      document.getElementById('filter-count').textContent = '';
       return;
     }
+
+    const total = allSavedLeads.length;
+    document.getElementById('filter-count').textContent =
+      saved.length < total ? `${saved.length} of ${total} shown` : `${total} leads`;
 
     tbody.innerHTML = saved.map((lead, i) => `
       <tr>
@@ -672,14 +740,31 @@
     empty.style.display = 'none';
   }
 
+  function filterSavedLeads() {
+    const text    = document.getElementById('filter-text').value.toLowerCase();
+    const quality = document.getElementById('filter-quality').value;
+    const status  = document.getElementById('filter-status').value;
+
+    let filtered = allSavedLeads;
+    if (text)    filtered = filtered.filter(l => (l.business_name || '').toLowerCase().includes(text) || (l.email || '').toLowerCase().includes(text));
+    if (quality) filtered = filtered.filter(l => l.quality === quality);
+    if (status)  filtered = filtered.filter(l => l.status  === status);
+    _renderSavedTable(filtered);
+  }
+
   function renderDbStats(stats) {
     const s = stats.by_status || {};
-    const safe = (k) => s[k] || 0;
-    document.getElementById('stat-total').textContent       = stats.total || 0;
-    document.getElementById('stat-new').textContent         = safe('new');
-    document.getElementById('stat-contacted').textContent   = safe('contacted');
-    document.getElementById('stat-qualified').textContent   = safe('qualified');
+    const q = stats.by_quality || {};
+    const safe  = (k) => s[k] || 0;
+    const safeQ = (k) => q[k] || 0;
+    document.getElementById('stat-total').textContent        = stats.total || 0;
+    document.getElementById('stat-new').textContent          = safe('new');
+    document.getElementById('stat-contacted').textContent    = safe('contacted');
+    document.getElementById('stat-qualified').textContent    = safe('qualified');
     document.getElementById('stat-disqualified').textContent = safe('disqualified');
+    document.getElementById('stat-high').textContent         = safeQ('High');
+    document.getElementById('stat-moderate').textContent     = safeQ('Moderate');
+    document.getElementById('stat-low').textContent          = safeQ('Low');
   }
 
   async function updateLeadStatus(id, status) {
@@ -778,8 +863,51 @@
     return isNaN(d) ? ts : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  // ── Session storage ────────────────────────────────────────────────────────
+
+  function saveSession(leadsData, label, location) {
+    try {
+      sessionStorage.setItem('lastLeads', JSON.stringify({ leads: leadsData, label, location, ts: Date.now() }));
+    } catch (e) {}
+  }
+
+  function checkSession() {
+    try {
+      const raw = sessionStorage.getItem('lastLeads');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!data.leads || !data.leads.length) return;
+      if (Date.now() - data.ts > 86400000) { sessionStorage.removeItem('lastLeads'); return; }
+      document.getElementById('session-banner-sub').textContent =
+        `${data.leads.length} leads — "${data.label}" in ${data.location}`;
+      document.getElementById('session-banner').style.display = 'flex';
+    } catch (e) {}
+  }
+
+  function restoreSession() {
+    try {
+      const data = JSON.parse(sessionStorage.getItem('lastLeads'));
+      if (!data) return;
+      leads = data.leads;
+      currentIndustry = data.label;
+      currentLocation = data.location;
+      document.getElementById('session-banner').style.display = 'none';
+      document.getElementById('table-wrap').style.display = 'block';
+      document.getElementById('status-bar').style.display = 'flex';
+      document.getElementById('save-btn').style.display = 'flex';
+      renderLeads();
+      showToast(`Restored ${leads.length} leads.`, 'success');
+    } catch (e) {}
+  }
+
+  function dismissSession() {
+    sessionStorage.removeItem('lastLeads');
+    document.getElementById('session-banner').style.display = 'none';
+  }
+
   // Init
   loadDbBadge();
+  checkSession();
 </script>
 </body>
 </html>

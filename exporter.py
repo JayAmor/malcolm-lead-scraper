@@ -11,6 +11,7 @@ FIELDS = [
     ('industry', 'Industry'),
     ('contact_name', 'Contact Name'),
     ('email', 'Email'),
+    ('email_valid', 'Email Verified'),
     ('phone', 'Phone'),
     ('quality', 'Quality'),
     ('notes', 'Notes'),
@@ -81,12 +82,14 @@ def to_pdf(leads, industry, location):
         pdf.cell(0, 6, f'  {q} Quality Lead', new_x='LMARGIN', new_y='NEXT')
 
         # Data fields
+        ev = lead.get('email_valid') or ''
+        ev_label = {'valid': 'Verified ✓', 'invalid': 'Invalid ✗', 'unverified': 'Unverified ?'}.get(ev, '')
         data = [
             ('Industry', lead.get('industry', '')),
             ('Location', lead.get('city_state', '')),
             ('Website', lead.get('website', '')),
             ('Phone', lead.get('phone', '')),
-            ('Email', lead.get('email', '')),
+            ('Email', lead.get('email', '') + (f'  [{ev_label}]' if ev_label else '')),
             ('Contact', lead.get('contact_name', '')),
             ('Notes', lead.get('notes', '')),
         ]

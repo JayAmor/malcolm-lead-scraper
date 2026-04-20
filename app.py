@@ -2,6 +2,7 @@ import io
 import json
 import os
 import threading
+import time
 import uuid
 from datetime import date
 
@@ -14,6 +15,15 @@ init_db()
 
 # In-memory job store — short-lived (scrapes complete in < 3 min)
 _jobs = {}
+_JOB_TTL = 600  # seconds before a completed job is purged
+
+
+def _purge_old_jobs():
+    cutoff = time.time() - _JOB_TTL
+    stale = [jid for jid, j in _jobs.items()
+             if j.get('status') != 'running' and j.get('created_at', 0) < cutoff]
+    for jid in stale:
+        del _jobs[jid]
 
 INDUSTRIES = {
     'Tier 1 — Home Services': ['Pest Control', 'HVAC', 'Electricians', 'Plumbers'],
@@ -75,8 +85,9 @@ def start_job():
     if not industries or not location:
         return jsonify({'error': 'At least one industry and a location are required'}), 400
 
+    _purge_old_jobs()
     job_id = uuid.uuid4().hex[:10]
-    _jobs[job_id] = {'status': 'running', 'leads': [], 'error': None}
+    _jobs[job_id] = {'status': 'running', 'leads': [], 'error': None, 'created_at': time.time()}
 
     def run():
         try:
