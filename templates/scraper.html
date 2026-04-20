@@ -8,7 +8,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 32px 24px 60px; }
     a { color: inherit; text-decoration: none; }
-    .container { max-width: 1120px; margin: 0 auto; }
+    .container { max-width: 1200px; margin: 0 auto; }
 
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #1e2533; }
@@ -23,7 +23,7 @@
     .page-title p { font-size: 13px; color: #64748b; }
 
     /* Tabs */
-    .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #1e2533; padding-bottom: 0; }
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #1e2533; }
     .tab-btn { background: none; border: none; color: #64748b; font-size: 13px; font-weight: 600; padding: 8px 18px 10px; cursor: pointer; position: relative; transition: color .2s; }
     .tab-btn::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: transparent; transition: background .2s; }
     .tab-btn.active { color: #e2e8f0; }
@@ -79,7 +79,7 @@
     .count-pill.high { color: #22c55e; border-color: #14532d; background: #052e16; }
     .count-pill.moderate { color: #eab308; border-color: #713f12; background: #1c1100; }
     .count-pill.low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
-    .export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .export-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .action-btn { font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: 1px solid #1e2533; background: #141824; color: #94a3b8; cursor: pointer; transition: border-color .2s, color .2s; display: flex; align-items: center; gap: 5px; }
     .action-btn:hover { border-color: #e05252; color: #e2e8f0; }
     .action-btn:disabled { opacity: .4; cursor: not-allowed; }
@@ -87,14 +87,30 @@
     .action-btn.save-btn:hover { background: #052e16; border-color: #22c55e; }
     .action-btn.validate-btn:hover { border-color: #eab308; color: #eab308; }
 
-    /* Loading */
-    .loading-state { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 50px 20px; text-align: center; }
+    /* View toggle */
+    .view-toggle { display: flex; gap: 2px; background: #0f1117; border: 1px solid #1e2533; border-radius: 7px; padding: 2px; }
+    .view-btn { background: none; border: none; color: #475569; cursor: pointer; padding: 5px 9px; border-radius: 5px; font-size: 15px; line-height: 1; transition: background .15s, color .15s; }
+    .view-btn.active { background: #1e2533; color: #e2e8f0; }
+
+    /* Loading / skeleton */
+    .loading-state { display: none; align-items: center; gap: 12px; padding: 14px 0 10px; }
     .loading-state.visible { display: flex; }
-    .spinner { width: 36px; height: 36px; border: 3px solid #1e2533; border-top-color: #e05252; border-radius: 50%; animation: spin .8s linear infinite; }
+    .spinner { width: 18px; height: 18px; border: 2px solid #1e2533; border-top-color: #e05252; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 14px; color: #64748b; }
-    .loading-text strong { color: #e2e8f0; display: block; margin-bottom: 4px; }
-    .live-count { font-size: 12px; color: #22c55e; margin-top: 6px; }
+    .loading-text { font-size: 13px; color: #64748b; }
+    .loading-text strong { color: #e2e8f0; }
+    .live-count { font-size: 12px; color: #22c55e; margin-left: 6px; }
+
+    @keyframes shimmer { 0%,100% { opacity: .4; } 50% { opacity: .8; } }
+    .skeleton-row td { padding: 14px 12px; }
+    .skel { height: 12px; border-radius: 4px; background: #1e2533; animation: shimmer 1.4s ease-in-out infinite; display: inline-block; }
+
+    /* Row animations */
+    @keyframes rowIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    .row-in { animation: rowIn .28s ease forwards; }
+    tbody tr.q-High  { border-left: 3px solid #22c55e; }
+    tbody tr.q-Moderate { border-left: 3px solid #eab308; }
+    tbody tr.q-Low   { border-left: 3px solid #ef4444; }
 
     /* Empty / error */
     .empty-state { text-align: center; padding: 50px 20px; color: #475569; font-size: 14px; }
@@ -107,11 +123,13 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     thead tr { border-bottom: 1px solid #1e2533; }
     th { text-align: left; padding: 10px 12px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #475569; white-space: nowrap; }
-    tbody tr { border-bottom: 1px solid #1a2030; transition: background .15s; }
-    tbody tr:hover { background: #141824; }
-    td { padding: 11px 12px; vertical-align: top; color: #cbd5e1; }
+    tbody tr { border-bottom: 1px solid #1a2030; transition: background .15s; cursor: pointer; }
+    tbody tr:hover { background: #1a2030; }
+    td { padding: 11px 12px; vertical-align: middle; color: #cbd5e1; }
+    .biz-cell { display: flex; align-items: flex-start; gap: 8px; }
+    .favicon { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
     .business-name { font-weight: 600; color: #e2e8f0; display: block; }
-    .business-link { font-size: 11px; color: #e05252; display: block; margin-top: 2px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .business-link { font-size: 11px; color: #e05252; display: block; margin-top: 2px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .business-link:hover { text-decoration: underline; }
 
     /* Badges */
@@ -121,31 +139,68 @@
     .badge.Low { color: #ef4444; border-color: #7f1d1d; background: #1c0a0a; }
     .badge.ads { color: #f59e42; border-color: #92400e; background: #1c0f00; }
 
-    /* Email validation icons */
+    /* Email / phone cells */
     .ev { font-size: 11px; font-weight: 700; flex-shrink: 0; }
     .ev.valid { color: #22c55e; }
     .ev.invalid { color: #ef4444; }
     .ev.unverified { color: #eab308; }
-    .email-cell { display: flex; align-items: flex-start; gap: 5px; }
+    .email-cell { display: flex; align-items: center; gap: 5px; }
+    .copy-btn { background: none; border: none; color: #334155; cursor: pointer; padding: 2px 5px; border-radius: 4px; font-size: 13px; line-height: 1; transition: color .15s, background .15s; flex-shrink: 0; }
+    .copy-btn:hover { color: #60a5fa; background: #0d1929; }
+    .copy-btn.copied { color: #22c55e !important; }
 
-    .notes-text { font-size: 11px; color: #64748b; line-height: 1.5; max-width: 200px; }
+    .notes-text { font-size: 11px; color: #64748b; line-height: 1.5; max-width: 180px; }
     .empty-val { color: #334155; }
-    .rm-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; transition: color .2s, background .2s; }
+    .rm-btn { background: none; border: none; color: #334155; cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 4px; transition: color .2s, background .2s; }
     .rm-btn:hover { color: #ef4444; background: #1c0a0a; }
 
+    /* Card view */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    @keyframes cardIn { from { opacity: 0; transform: scale(.97) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .lead-card { background: #141824; border: 1px solid #1e2533; border-radius: 12px; padding: 18px; cursor: pointer; position: relative; transition: border-color .2s, transform .15s; animation: cardIn .25s ease forwards; }
+    .lead-card:hover { border-color: #2a3550; transform: translateY(-2px); }
+    .lead-card.q-High   { border-left: 3px solid #22c55e; }
+    .lead-card.q-Moderate { border-left: 3px solid #eab308; }
+    .lead-card.q-Low    { border-left: 3px solid #ef4444; }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+    .card-biz { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
+    .card-name { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+    .card-domain { font-size: 11px; color: #e05252; margin-top: 2px; }
+    .card-field { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; margin-top: 6px; }
+    .card-field strong { color: #94a3b8; }
+    .card-rm { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #334155; cursor: pointer; font-size: 14px; padding: 3px 6px; border-radius: 4px; transition: color .2s; }
+    .card-rm:hover { color: #ef4444; }
+
     /* Saved Leads tab */
-    .db-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-    .stat-card { background: #0f1117; border: 1px solid #1e2533; border-radius: 10px; padding: 12px 18px; min-width: 100px; text-align: center; }
-    .stat-num { font-size: 24px; font-weight: 700; color: #e2e8f0; }
+    .db-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+    .stat-card { background: #0f1117; border: 1px solid #1e2533; border-radius: 10px; padding: 12px 18px; min-width: 90px; text-align: center; }
+    .stat-num { font-size: 24px; font-weight: 700; color: #e2e8f0; transition: all .2s; }
     .stat-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #475569; margin-top: 2px; }
 
-    .status-select { background: #0f1117; border: 1px solid #1e2533; border-radius: 6px; color: #e2e8f0; font-size: 11px; font-weight: 600; padding: 4px 8px; cursor: pointer; outline: none; }
+    .status-select { background: #0f1117; border: 1px solid #1e2533; border-radius: 6px; color: #e2e8f0; font-size: 11px; font-weight: 600; padding: 4px 8px; cursor: pointer; outline: none; -webkit-appearance: none; appearance: none; }
     .status-select.new { color: #94a3b8; }
     .status-select.contacted { color: #60a5fa; }
     .status-select.qualified { color: #22c55e; }
     .status-select.disqualified { color: #ef4444; }
 
-    .db-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .db-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+
+    /* Charts area */
+    .charts-row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 20px; }
+    .chart-block { display: flex; align-items: center; gap: 14px; }
+    .chart-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #334155; margin-bottom: 8px; }
+    .chart-legend { display: flex; flex-direction: column; gap: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #64748b; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-val { color: #e2e8f0; font-weight: 700; margin-left: 2px; }
+
+    /* Pipeline */
+    .pipeline-wrap { border-top: 1px solid #1e2533; padding-top: 18px; margin-top: 4px; }
+    .pipeline-track { height: 6px; border-radius: 3px; background: #0f1117; overflow: hidden; display: flex; margin-bottom: 8px; }
+    .pipeline-seg { height: 100%; transition: width .6s ease; min-width: 2px; }
+    .pipeline-labels { display: flex; flex-wrap: wrap; gap: 12px; }
+    .pipeline-lbl { font-size: 11px; display: flex; align-items: center; gap: 5px; }
+    .pipeline-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
     /* Filter bar */
     .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
@@ -154,7 +209,42 @@
     .filter-bar select { background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; color: #94a3b8; font-size: 12px; padding: 8px 28px 8px 10px; outline: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; cursor: pointer; -webkit-appearance: none; appearance: none; }
     .filter-count { font-size: 11px; color: #475569; white-space: nowrap; }
 
-    /* Session restore banner */
+    /* Kanban */
+    .kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .kanban-col { background: #0c1018; border: 1px solid #1e2533; border-radius: 12px; padding: 14px; min-height: 180px; transition: border-color .15s, background .15s; }
+    .kanban-col.drag-over { border-color: #e05252; background: #150e0e; }
+    .kanban-col-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .kanban-col-name { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .kanban-col[data-s="new"] .kanban-col-name { color: #94a3b8; }
+    .kanban-col[data-s="contacted"] .kanban-col-name { color: #60a5fa; }
+    .kanban-col[data-s="qualified"] .kanban-col-name { color: #22c55e; }
+    .kanban-col[data-s="disqualified"] .kanban-col-name { color: #ef4444; }
+    .kanban-col-ct { font-size: 11px; font-weight: 700; background: #1e2533; border-radius: 10px; padding: 1px 8px; color: #64748b; }
+    @keyframes kanbanIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .kanban-card { background: #141824; border: 1px solid #1e2533; border-radius: 8px; padding: 11px 13px; margin-bottom: 8px; cursor: grab; transition: border-color .15s, box-shadow .15s; animation: kanbanIn .2s ease; }
+    .kanban-card:last-child { margin-bottom: 0; }
+    .kanban-card:hover { border-color: #2a3550; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+    .kanban-card.dragging { opacity: .45; cursor: grabbing; }
+    .kc-name { font-size: 12px; font-weight: 600; color: #e2e8f0; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kc-email { font-size: 11px; color: #60a5fa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kc-domain { font-size: 10px; color: #334155; margin-top: 3px; }
+    .kc-footer { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+
+    /* Lead detail drawer */
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .detail-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 420px; max-width: 95vw; background: #141824; border-left: 1px solid #1e2533; z-index: 201; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow-y: auto; padding: 28px 26px 40px; }
+    .detail-drawer.open { transform: translateX(0); }
+    .drawer-close { background: none; border: none; color: #475569; font-size: 20px; cursor: pointer; padding: 4px; border-radius: 6px; transition: color .2s; line-height: 1; }
+    .drawer-close:hover { color: #e2e8f0; }
+    .drawer-field { margin-bottom: 16px; }
+    .drawer-field-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #475569; margin-bottom: 4px; }
+    .drawer-field-val { font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+    .drawer-link { display: flex; align-items: center; gap: 8px; background: #0f1117; border: 1px solid #1e2533; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; color: #60a5fa; font-size: 13px; transition: border-color .2s; }
+    .drawer-link:hover { border-color: #60a5fa; }
+    .drawer-link span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Session banner */
     .session-banner { background: #0d1929; border: 1px solid #1e3a5f; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .session-banner-text strong { display: block; font-size: 13px; color: #60a5fa; margin-bottom: 2px; }
     .session-banner-text span { font-size: 11px; color: #475569; }
@@ -168,7 +258,13 @@
     .toast.success { border-color: #14532d; color: #22c55e; }
     .toast.error { border-color: #7f1d1d; color: #ef4444; }
 
-    @media (max-width: 700px) { .controls-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 800px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .kanban-board { grid-template-columns: repeat(2, 1fr); }
+      .detail-drawer { width: 100%; border-left: none; border-top: 1px solid #1e2533; top: auto; height: 80vh; transform: translateY(100%); }
+      .detail-drawer.open { transform: translateY(0); }
+      .charts-row { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
@@ -184,7 +280,6 @@
     <p>Target businesses by industry and location. Qualify, validate, and export.</p>
   </div>
 
-  <!-- Tabs -->
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('search')">Search</button>
     <button class="tab-btn" onclick="switchTab('saved')">
@@ -208,8 +303,6 @@
 
     <div class="panel">
       <div class="panel-title">Search Parameters</div>
-
-      <!-- Industry chip picker -->
       <div class="industry-section">
         <div class="industry-header">
           <label>Industries <span class="industry-meta">— <span id="chip-count">0</span> selected</span></label>
@@ -229,7 +322,6 @@
         </div>
         {% endfor %}
       </div>
-
       <div class="controls-grid" style="grid-template-columns:1fr 180px;">
         <div class="field-group">
           <label for="sel-location">Location</label>
@@ -255,7 +347,7 @@
             <input type="checkbox" id="chk-validate" />
             <span class="checkbox-label"><strong>Validate emails</strong> after scraping</span>
           </label>
-          <div class="checkbox-hint">Checks MX records + SMTP — removes emails that fail. Adds ~30s.</div>
+          <div class="checkbox-hint">Checks MX records — removes emails that fail.</div>
         </div>
         <button class="scrape-btn" id="scrape-btn" onclick="runScrape()">Scrape Leads</button>
       </div>
@@ -263,7 +355,6 @@
 
     <div class="error-banner" id="error-banner"></div>
 
-    <!-- Status bar -->
     <div class="status-bar" id="status-bar" style="display:none">
       <div class="status-counts" id="status-counts"></div>
       <div class="export-actions">
@@ -271,10 +362,13 @@
         <button class="action-btn validate-btn" id="validate-btn" onclick="runValidate()">&#10003; Validate Emails</button>
         <button class="action-btn" onclick="exportFile('csv')">&#8595; CSV</button>
         <button class="action-btn" onclick="exportFile('pdf')">&#8595; PDF</button>
+        <div class="view-toggle" id="view-toggle" style="display:none">
+          <button class="view-btn active" id="view-table-btn" onclick="setView('table')" title="Table view">&#9783;</button>
+          <button class="view-btn" id="view-cards-btn" onclick="setView('cards')" title="Card view">&#9635;</button>
+        </div>
       </div>
     </div>
 
-    <!-- Results panel -->
     <div class="panel" id="results-panel">
       <div class="loading-state" id="loading-state">
         <div class="spinner"></div>
@@ -310,6 +404,8 @@
           <tbody id="leads-tbody"></tbody>
         </table>
       </div>
+
+      <div id="cards-container" style="display:none"></div>
     </div>
 
   </div><!-- /tab-search -->
@@ -318,25 +414,49 @@
   <div id="tab-saved" class="tab-pane">
     <div class="panel">
       <div class="panel-title">Database Overview</div>
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:8px">By Status</div>
-      <div class="db-stats" id="db-stats" style="margin-bottom:16px">
-        <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#94a3b8" id="stat-new">—</div><div class="stat-label">New</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#60a5fa" id="stat-contacted">—</div><div class="stat-label">Contacted</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-qualified">—</div><div class="stat-label">Qualified</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#ef4444" id="stat-disqualified">—</div><div class="stat-label">Disqualified</div></div>
+      <div class="charts-row">
+        <div class="chart-block">
+          <div>
+            <div class="chart-label">Quality</div>
+            <div id="quality-chart"></div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>High<span class="legend-val" id="stat-high">—</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#eab308"></span>Moderate<span class="legend-val" id="stat-moderate">—</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Low<span class="legend-val" id="stat-low">—</span></div>
+          </div>
+        </div>
+        <div class="chart-block">
+          <div>
+            <div class="chart-label">Status</div>
+            <div id="status-chart"></div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#94a3b8"></span>New<span class="legend-val" id="stat-new">—</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>Contacted<span class="legend-val" id="stat-contacted">—</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Qualified<span class="legend-val" id="stat-qualified">—</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Disqualified<span class="legend-val" id="stat-disqualified">—</span></div>
+          </div>
+        </div>
+        <div class="stat-card" style="align-self:center">
+          <div class="stat-num" id="stat-total">—</div>
+          <div class="stat-label">Total</div>
+        </div>
       </div>
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:8px">By Quality</div>
-      <div class="db-stats">
-        <div class="stat-card"><div class="stat-num" style="color:#22c55e" id="stat-high">—</div><div class="stat-label">High</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#eab308" id="stat-moderate">—</div><div class="stat-label">Moderate</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#ef4444" id="stat-low">—</div><div class="stat-label">Low</div></div>
+      <div class="pipeline-wrap" id="pipeline-wrap" style="display:none">
+        <div class="chart-label" style="margin-bottom:8px">Lead Pipeline</div>
+        <div class="pipeline-track" id="pipeline-track"></div>
+        <div class="pipeline-labels" id="pipeline-labels"></div>
       </div>
     </div>
 
     <div class="db-actions">
       <button class="action-btn" onclick="loadSavedLeads()">&#8635; Refresh</button>
       <a class="action-btn" href="/api/leads/export/csv">&#8595; Export All CSV</a>
+      <div class="view-toggle">
+        <button class="view-btn active" id="saved-view-table-btn" onclick="setSavedView('table')" title="Table">&#9783;</button>
+        <button class="view-btn" id="saved-view-kanban-btn" onclick="setSavedView('kanban')" title="Kanban">&#9635;</button>
+      </div>
     </div>
 
     <div class="filter-bar" id="saved-filter-bar" style="display:none">
@@ -382,9 +502,15 @@
         </table>
       </div>
     </div>
+
+    <div id="kanban-container" style="display:none"></div>
   </div><!-- /tab-saved -->
 
-</div>
+</div><!-- /container -->
+
+<!-- Lead detail drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDetail()"></div>
+<div class="detail-drawer" id="detail-drawer"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -395,27 +521,28 @@
   let currentLocation = '';
   let savedLeadsLoaded = false;
   let activeSource = null;
+  let searchViewMode = 'table';
+  let savedViewMode = 'table';
+  let skeletonsCleared = false;
 
-  // ── Tab system ─────────────────────────────────────────────────────────────
+  // ── Tab system ──────────────────────────────────────────────────────────────
 
   function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelector(`.tab-btn[onclick*="${name}"]`).classList.add('active');
     document.getElementById(`tab-${name}`).classList.add('active');
-
     if (name === 'saved' && !savedLeadsLoaded) {
       savedLeadsLoaded = true;
       loadSavedLeads();
     }
   }
 
-  // ── Scraping (SSE) ─────────────────────────────────────────────────────────
+  // ── Chip picker ─────────────────────────────────────────────────────────────
 
   function toggleChip(el) {
     el.classList.toggle('selected');
-    document.getElementById('chip-count').textContent =
-      document.querySelectorAll('.chip.selected').length;
+    document.getElementById('chip-count').textContent = document.querySelectorAll('.chip.selected').length;
   }
   function selectAllChips() {
     document.querySelectorAll('.chip').forEach(c => c.classList.add('selected'));
@@ -429,6 +556,8 @@
     return [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
   }
 
+  // ── Scraping ────────────────────────────────────────────────────────────────
+
   async function runScrape() {
     const industries = getSelectedIndustries();
     const location = document.getElementById('sel-location').value;
@@ -436,24 +565,26 @@
     const validate = document.getElementById('chk-validate').checked;
 
     if (!industries.length || !location) { showToast('Select at least one industry and a location.', 'error'); return; }
-
     if (activeSource) { clearInterval(activeSource); activeSource = null; }
 
     currentIndustry = industries.join(', ');
     currentLocation = location;
     leads = [];
+    skeletonsCleared = false;
+    searchViewMode = 'table';
+    document.getElementById('view-table-btn').classList.add('active');
+    document.getElementById('view-cards-btn').classList.remove('active');
 
     const label = industries.length === 1 ? industries[0] : `${industries.length} industries`;
-    setLoading(true, `Searching for ${label} in ${location}…`, 'Leads will appear as they\'re found.');
+    setLoading(true, `Searching for ${label} in ${location}…`);
     hideError();
-    document.getElementById('table-wrap').style.display = 'none';
     document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('cards-container').style.display = 'none';
     document.getElementById('status-bar').style.display = 'none';
     document.getElementById('save-btn').style.display = 'none';
-    document.getElementById('leads-tbody').innerHTML = '';
+    document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('live-count').textContent = '';
 
-    // Start job on server
     let job_id;
     try {
       const startResp = await fetch('/api/jobs', {
@@ -470,14 +601,12 @@
       return;
     }
 
-    // Poll every 3 seconds for new leads
     let seenCount = 0;
     const pollInterval = setInterval(async () => {
       try {
         const r = await fetch(`/api/jobs/${job_id}`);
         const job = await r.json();
 
-        // Append any new leads since last poll
         const newLeads = (job.leads || []).slice(seenCount);
         newLeads.forEach(lead => {
           leads.push(lead);
@@ -495,21 +624,22 @@
           clearInterval(pollInterval);
           activeSource = null;
           setLoading(false);
+          clearSkeletons();
 
-          if (job.status === 'error') {
-            showError(job.error || 'Scraping failed.');
-            return;
-          }
+          if (job.status === 'error') { showError(job.error || 'Scraping failed.'); return; }
+
           if (leads.length === 0) {
+            document.getElementById('table-wrap').style.display = 'none';
+            document.getElementById('status-bar').style.display = 'none';
             document.getElementById('empty-state').innerHTML = `
-              <div class="icon">&#128683;</div>
-              <strong>No leads found</strong>
+              <div class="icon">&#128683;</div><strong>No leads found</strong>
               <p>Try a different industry or location, or increase the count.</p>`;
             document.getElementById('empty-state').style.display = 'block';
           } else {
             if (validate) await runValidate();
             saveSession(leads, currentIndustry, currentLocation);
             document.getElementById('save-btn').style.display = 'flex';
+            document.getElementById('view-toggle').style.display = 'flex';
             document.getElementById('live-count').textContent = '';
             showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
           }
@@ -518,6 +648,7 @@
         clearInterval(pollInterval);
         activeSource = null;
         setLoading(false);
+        clearSkeletons();
         if (leads.length === 0) showError('Could not reach server. Please try again.');
       }
     }, 3000);
@@ -525,7 +656,7 @@
     activeSource = pollInterval;
   }
 
-  // ── Validate emails ────────────────────────────────────────────────────────
+  // ── Validate emails ─────────────────────────────────────────────────────────
 
   async function runValidate() {
     if (leads.length === 0) return;
@@ -539,11 +670,7 @@
         body: JSON.stringify({ leads }),
       });
       let data;
-      try {
-        data = await resp.json();
-      } catch (e) {
-        throw new Error('Validation service error. Please try again.');
-      }
+      try { data = await resp.json(); } catch (e) { throw new Error('Validation service error. Please try again.'); }
       if (!resp.ok) throw new Error(data.error || 'Validation failed');
       leads = data.leads || leads;
       renderLeads();
@@ -556,7 +683,7 @@
     }
   }
 
-  // ── Save to database ───────────────────────────────────────────────────────
+  // ── Save to database ────────────────────────────────────────────────────────
 
   async function saveToDb() {
     if (leads.length === 0) return;
@@ -579,7 +706,7 @@
     }
   }
 
-  // ── Export session results ─────────────────────────────────────────────────
+  // ── Export ──────────────────────────────────────────────────────────────────
 
   async function exportFile(format) {
     if (leads.length === 0) return;
@@ -601,14 +728,59 @@
     }
   }
 
-  // ── Render helpers (search tab) ────────────────────────────────────────────
+  // ── View toggle (search tab) ────────────────────────────────────────────────
+
+  function setView(mode) {
+    searchViewMode = mode;
+    document.getElementById('view-table-btn').classList.toggle('active', mode === 'table');
+    document.getElementById('view-cards-btn').classList.toggle('active', mode === 'cards');
+    document.getElementById('table-wrap').style.display = mode === 'table' ? 'block' : 'none';
+    const cc = document.getElementById('cards-container');
+    if (mode === 'cards') {
+      cc.style.display = 'block';
+      renderCards();
+    } else {
+      cc.style.display = 'none';
+    }
+  }
+
+  // ── Skeleton loader ─────────────────────────────────────────────────────────
+
+  function showSkeletons(n = 6) {
+    const tbody = document.getElementById('leads-tbody');
+    tbody.innerHTML = Array(n).fill(0).map(() => `
+      <tr class="skeleton-row">
+        <td><span class="skel" style="width:18px"></span></td>
+        <td><span class="skel" style="width:130px;display:block;margin-bottom:5px"></span><span class="skel" style="width:80px"></span></td>
+        <td><span class="skel" style="width:80px"></span></td>
+        <td><span class="skel" style="width:90px"></span></td>
+        <td><span class="skel" style="width:140px"></span></td>
+        <td><span class="skel" style="width:80px"></span></td>
+        <td><span class="skel" style="width:24px"></span></td>
+        <td><span class="skel" style="width:52px;height:18px;border-radius:9px"></span></td>
+        <td><span class="skel" style="width:120px"></span></td>
+        <td></td>
+      </tr>`).join('');
+    document.getElementById('table-wrap').style.display = 'block';
+    document.getElementById('status-bar').style.display = 'flex';
+  }
+
+  function clearSkeletons() {
+    document.querySelectorAll('.skeleton-row').forEach(r => r.remove());
+  }
+
+  // ── Render helpers (search tab) ─────────────────────────────────────────────
 
   function appendLeadRow(lead, i) {
+    if (!skeletonsCleared) { clearSkeletons(); skeletonsCleared = true; }
     const tbody = document.getElementById('leads-tbody');
     const tr = document.createElement('tr');
     tr.id = `row-${i}`;
+    tr.className = `q-${lead.quality} row-in`;
+    tr.setAttribute('onclick', `showDetail(${i})`);
     tr.innerHTML = leadRowHTML(lead, i);
     tbody.appendChild(tr);
+    if (searchViewMode === 'cards') renderCards();
   }
 
   function renderLeads() {
@@ -617,45 +789,60 @@
     leads.forEach((lead, i) => {
       const tr = document.createElement('tr');
       tr.id = `row-${i}`;
+      tr.className = `q-${lead.quality}`;
+      tr.setAttribute('onclick', `showDetail(${i})`);
       tr.innerHTML = leadRowHTML(lead, i);
       tbody.appendChild(tr);
     });
     updateStatusCounts();
+    if (searchViewMode === 'cards') renderCards();
     if (leads.length === 0) {
       document.getElementById('table-wrap').style.display = 'none';
       document.getElementById('status-bar').style.display = 'none';
+      document.getElementById('view-toggle').style.display = 'none';
     }
   }
 
   function leadRowHTML(lead, i) {
-    const adsBadge = lead.has_google_ads
-      ? '<span class="badge ads" title="Running Google Ads">Ads</span>' : '—';
+    const domain = shortUrl(lead.website);
+    const adsBadge = lead.has_google_ads ? '<span class="badge ads">Ads</span>' : '<span class="empty-val">—</span>';
     return `
-      <td style="color:#475569;width:32px">${i + 1}</td>
+      <td style="color:#475569;width:28px;font-size:12px">${i + 1}</td>
       <td>
-        <span class="business-name">${esc(lead.business_name || '—')}</span>
-        <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
+        <div class="biz-cell">
+          <img class="favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" onerror="this.style.display='none'" alt="" loading="lazy">
+          <div>
+            <span class="business-name">${esc(lead.business_name || '—')}</span>
+            <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${domain}</a>
+          </div>
+        </div>
       </td>
-      <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
-      <td>${lead.contact_name ? esc(lead.contact_name) : '<span class="empty-val">—</span>'}</td>
+      <td style="white-space:nowrap;font-size:12px">${esc(lead.city_state || '—')}</td>
+      <td style="font-size:12px">${lead.contact_name ? esc(lead.contact_name) : '<span class="empty-val">—</span>'}</td>
       <td>
         <div class="email-cell">
           ${evIcon(lead.email_valid)}
-          <span>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
+          <span style="font-size:12px">${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
+          ${lead.email ? `<button class="copy-btn" onclick="event.stopPropagation();copyText('${esc(lead.email)}',this)" title="Copy email">&#10697;</button>` : ''}
         </div>
       </td>
-      <td style="white-space:nowrap">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
+      <td style="white-space:nowrap;font-size:12px">
+        ${lead.phone ? `${esc(lead.phone)}<button class="copy-btn" onclick="event.stopPropagation();copyText('${esc(lead.phone)}',this)" title="Copy phone">&#10697;</button>` : '<span class="empty-val">—</span>'}
+      </td>
       <td>${adsBadge}</td>
       <td><span class="badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
       <td><div class="notes-text">${esc(lead.notes || '—')}</div></td>
-      <td><button class="rm-btn" onclick="removeLead(${i})" title="Remove">&#10005;</button></td>
+      <td><button class="rm-btn" onclick="event.stopPropagation();removeLead(${i})" title="Remove">&#10005;</button></td>
     `;
   }
 
   function removeLead(i) {
     leads.splice(i, 1);
     renderLeads();
-    if (leads.length === 0) document.getElementById('save-btn').style.display = 'none';
+    if (leads.length === 0) {
+      document.getElementById('save-btn').style.display = 'none';
+      document.getElementById('view-toggle').style.display = 'none';
+    }
   }
 
   function updateStatusCounts() {
@@ -670,17 +857,117 @@
     `;
   }
 
-  // ── Saved Leads tab ────────────────────────────────────────────────────────
+  // ── Card view ───────────────────────────────────────────────────────────────
+
+  function renderCards() {
+    const cc = document.getElementById('cards-container');
+    if (!leads.length) { cc.innerHTML = ''; return; }
+    cc.innerHTML = `<div class="cards-grid">${leads.map((lead, i) => cardHTML(lead, i)).join('')}</div>`;
+  }
+
+  function cardHTML(lead, i) {
+    const domain = shortUrl(lead.website);
+    return `
+      <div class="lead-card q-${esc(lead.quality)}" onclick="showDetail(${i})">
+        <button class="card-rm" onclick="event.stopPropagation();removeLead(${i})" title="Remove">&#10005;</button>
+        <div class="card-header">
+          <div class="card-biz">
+            <img class="favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" onerror="this.style.display='none'" alt="" style="width:16px;height:16px;margin-top:1px" loading="lazy">
+            <div>
+              <div class="card-name">${esc(lead.business_name || '—')}</div>
+              <a class="card-domain" href="${esc(lead.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${domain}</a>
+            </div>
+          </div>
+          <span class="badge ${esc(lead.quality)}" style="flex-shrink:0">${esc(lead.quality)}</span>
+        </div>
+        ${lead.city_state ? `<div class="card-field"><strong>&#128205;</strong>${esc(lead.city_state)}</div>` : ''}
+        ${lead.email ? `<div class="card-field"><strong>&#9993;</strong>${esc(lead.email)}
+          <button class="copy-btn" onclick="event.stopPropagation();copyText('${esc(lead.email)}',this)" title="Copy">&#10697;</button></div>` : ''}
+        ${lead.phone ? `<div class="card-field"><strong>&#128222;</strong>${esc(lead.phone)}
+          <button class="copy-btn" onclick="event.stopPropagation();copyText('${esc(lead.phone)}',this)" title="Copy">&#10697;</button></div>` : ''}
+        ${lead.contact_name ? `<div class="card-field"><strong>&#128100;</strong>${esc(lead.contact_name)}</div>` : ''}
+        ${lead.has_google_ads ? '<div style="margin-top:8px"><span class="badge ads">Google Ads</span></div>' : ''}
+      </div>`;
+  }
+
+  // ── Lead detail drawer ──────────────────────────────────────────────────────
+
+  function showDetail(i) {
+    const lead = leads[i];
+    if (!lead) return;
+    const domain = shortUrl(lead.website);
+    const evLabel = { valid: '✓ Verified', invalid: '✗ Invalid', unverified: '? Unverified' }[lead.email_valid] || '';
+    const evColor = { valid: '#22c55e', invalid: '#ef4444', unverified: '#eab308' }[lead.email_valid] || '#64748b';
+
+    document.getElementById('detail-drawer').innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+            <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" onerror="this.style.display='none'" style="width:20px;height:20px;border-radius:3px" alt="" loading="lazy">
+            <h2 style="font-size:17px;font-weight:700;color:#e2e8f0;line-height:1.3">${esc(lead.business_name || '—')}</h2>
+          </div>
+          <span class="badge ${esc(lead.quality)}">${esc(lead.quality)} Quality</span>
+          ${lead.has_google_ads ? '<span class="badge ads" style="margin-left:6px">Google Ads</span>' : ''}
+        </div>
+        <button class="drawer-close" onclick="closeDetail()">&#10005;</button>
+      </div>
+      <a href="${esc(lead.website)}" target="_blank" rel="noopener" class="drawer-link" onclick="event.stopPropagation()">
+        <span>${esc(lead.website)}</span><span style="font-size:11px;flex-shrink:0">&#8599;</span>
+      </a>
+      ${drawerField('Industry', lead.industry)}
+      ${drawerField('Location', lead.city_state)}
+      ${drawerField('Contact', lead.contact_name)}
+      ${lead.email ? `
+        <div class="drawer-field">
+          <div class="drawer-field-label">Email</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="drawer-field-val">${esc(lead.email)}</span>
+            ${evLabel ? `<span style="font-size:11px;font-weight:700;color:${evColor}">${evLabel}</span>` : ''}
+            <button class="copy-btn" onclick="copyText('${esc(lead.email)}',this)" title="Copy email" style="font-size:15px">&#10697;</button>
+          </div>
+        </div>` : ''}
+      ${lead.phone ? `
+        <div class="drawer-field">
+          <div class="drawer-field-label">Phone</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="drawer-field-val">${esc(lead.phone)}</span>
+            <button class="copy-btn" onclick="copyText('${esc(lead.phone)}',this)" title="Copy phone" style="font-size:15px">&#10697;</button>
+          </div>
+        </div>` : ''}
+      ${lead.notes ? `<div class="drawer-field"><div class="drawer-field-label">Notes</div><div class="drawer-field-val" style="color:#94a3b8;font-size:12px;line-height:1.6">${esc(lead.notes)}</div></div>` : ''}
+    `;
+    document.getElementById('drawer-overlay').classList.add('open');
+    document.getElementById('detail-drawer').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('drawer-overlay').classList.remove('open');
+    document.getElementById('detail-drawer').classList.remove('open');
+  }
+
+  function drawerField(label, value) {
+    if (!value) return '';
+    return `<div class="drawer-field"><div class="drawer-field-label">${esc(label)}</div><div class="drawer-field-val">${esc(value)}</div></div>`;
+  }
+
+  // ── Copy to clipboard ───────────────────────────────────────────────────────
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '&#10003;';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+    }).catch(() => showToast('Could not copy to clipboard', 'error'));
+  }
+
+  // ── Saved Leads tab ─────────────────────────────────────────────────────────
 
   async function loadSavedLeads() {
     try {
-      const [leadsResp, statsResp] = await Promise.all([
-        fetch('/api/leads'),
-        fetch('/api/leads/stats'),
-      ]);
+      const [leadsResp, statsResp] = await Promise.all([fetch('/api/leads'), fetch('/api/leads/stats')]);
       const { leads: saved } = await leadsResp.json();
       const stats = await statsResp.json();
-
       renderSavedLeads(saved);
       renderDbStats(stats);
       loadDbBadge(stats.total);
@@ -691,8 +978,13 @@
 
   function renderSavedLeads(saved) {
     allSavedLeads = saved;
-    document.getElementById('saved-filter-bar').style.display = saved.length ? 'flex' : 'none';
-    _renderSavedTable(saved);
+    const hasData = saved.length > 0;
+    document.getElementById('saved-filter-bar').style.display = (hasData && savedViewMode === 'table') ? 'flex' : 'none';
+    if (savedViewMode === 'kanban') {
+      renderKanban(saved);
+    } else {
+      _renderSavedTable(saved);
+    }
   }
 
   function _renderSavedTable(saved) {
@@ -711,30 +1003,42 @@
     document.getElementById('filter-count').textContent =
       saved.length < total ? `${saved.length} of ${total} shown` : `${total} leads`;
 
-    tbody.innerHTML = saved.map((lead, i) => `
-      <tr>
-        <td style="color:#475569;width:32px">${i + 1}</td>
-        <td>
-          <span class="business-name">${esc(lead.business_name || '—')}</span>
-          <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${shortUrl(lead.website)}</a>
-        </td>
-        <td style="white-space:nowrap">${esc(lead.city_state || '—')}</td>
-        <td>${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</td>
-        <td style="white-space:nowrap">${lead.phone ? esc(lead.phone) : '<span class="empty-val">—</span>'}</td>
-        <td><span class="badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
-        <td>
-          <select class="status-select ${esc(lead.status)}"
-            onchange="updateLeadStatus(${lead.id}, this.value); this.className='status-select '+this.value">
-            <option value="new"          ${lead.status==='new'          ?'selected':''}>New</option>
-            <option value="contacted"    ${lead.status==='contacted'    ?'selected':''}>Contacted</option>
-            <option value="qualified"    ${lead.status==='qualified'    ?'selected':''}>Qualified</option>
-            <option value="disqualified" ${lead.status==='disqualified' ?'selected':''}>Disqualified</option>
-          </select>
-        </td>
-        <td style="font-size:11px;color:#475569;white-space:nowrap">${fmtDate(lead.created_at)}</td>
-        <td><button class="rm-btn" onclick="deleteSavedLead(${lead.id}, this)" title="Delete">&#10005;</button></td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = saved.map((lead, i) => {
+      const domain = shortUrl(lead.website);
+      return `
+        <tr>
+          <td style="color:#475569;width:28px;font-size:12px">${i + 1}</td>
+          <td>
+            <div class="biz-cell">
+              <img class="favicon" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" onerror="this.style.display='none'" alt="" loading="lazy">
+              <div>
+                <span class="business-name">${esc(lead.business_name || '—')}</span>
+                <a class="business-link" href="${esc(lead.website)}" target="_blank" rel="noopener">${domain}</a>
+              </div>
+            </div>
+          </td>
+          <td style="white-space:nowrap;font-size:12px">${esc(lead.city_state || '—')}</td>
+          <td>
+            <div class="email-cell">
+              <span style="font-size:12px">${lead.email ? esc(lead.email) : '<span class="empty-val">—</span>'}</span>
+              ${lead.email ? `<button class="copy-btn" onclick="copyText('${esc(lead.email)}',this)" title="Copy">&#10697;</button>` : ''}
+            </div>
+          </td>
+          <td style="white-space:nowrap;font-size:12px">${lead.phone ? `${esc(lead.phone)}<button class="copy-btn" onclick="copyText('${esc(lead.phone)}',this)" title="Copy">&#10697;</button>` : '<span class="empty-val">—</span>'}</td>
+          <td><span class="badge ${esc(lead.quality)}">${esc(lead.quality)}</span></td>
+          <td>
+            <select class="status-select ${esc(lead.status)}"
+              onchange="updateLeadStatus(${lead.id}, this.value); this.className='status-select '+this.value">
+              <option value="new"          ${lead.status==='new'          ?'selected':''}>New</option>
+              <option value="contacted"    ${lead.status==='contacted'    ?'selected':''}>Contacted</option>
+              <option value="qualified"    ${lead.status==='qualified'    ?'selected':''}>Qualified</option>
+              <option value="disqualified" ${lead.status==='disqualified' ?'selected':''}>Disqualified</option>
+            </select>
+          </td>
+          <td style="font-size:11px;color:#475569;white-space:nowrap">${fmtDate(lead.created_at)}</td>
+          <td><button class="rm-btn" onclick="deleteSavedLead(${lead.id}, this)" title="Delete">&#10005;</button></td>
+        </tr>`;
+    }).join('');
 
     wrap.style.display = 'block';
     empty.style.display = 'none';
@@ -744,7 +1048,6 @@
     const text    = document.getElementById('filter-text').value.toLowerCase();
     const quality = document.getElementById('filter-quality').value;
     const status  = document.getElementById('filter-status').value;
-
     let filtered = allSavedLeads;
     if (text)    filtered = filtered.filter(l => (l.business_name || '').toLowerCase().includes(text) || (l.email || '').toLowerCase().includes(text));
     if (quality) filtered = filtered.filter(l => l.quality === quality);
@@ -752,33 +1055,172 @@
     _renderSavedTable(filtered);
   }
 
+  // ── Kanban board ────────────────────────────────────────────────────────────
+
+  let draggedId = null;
+
+  function setSavedView(mode) {
+    savedViewMode = mode;
+    document.getElementById('saved-view-table-btn').classList.toggle('active', mode === 'table');
+    document.getElementById('saved-view-kanban-btn').classList.toggle('active', mode === 'kanban');
+    document.getElementById('saved-panel').style.display = mode === 'table' ? 'block' : 'none';
+    document.getElementById('kanban-container').style.display = mode === 'kanban' ? 'block' : 'none';
+    document.getElementById('saved-filter-bar').style.display =
+      (mode === 'table' && allSavedLeads.length) ? 'flex' : 'none';
+    if (mode === 'kanban') renderKanban(allSavedLeads);
+  }
+
+  function renderKanban(saved) {
+    const statuses = ['new', 'contacted', 'qualified', 'disqualified'];
+    const labels   = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', disqualified: 'Disqualified' };
+    const byStatus = Object.fromEntries(statuses.map(s => [s, []]));
+    saved.forEach(l => { const s = l.status || 'new'; if (byStatus[s]) byStatus[s].push(l); });
+
+    document.getElementById('kanban-container').innerHTML = `
+      <div class="kanban-board">
+        ${statuses.map(s => `
+          <div class="kanban-col" data-s="${s}"
+            ondragover="event.preventDefault(); this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="kanbanDrop(event,'${s}')">
+            <div class="kanban-col-hdr">
+              <span class="kanban-col-name">${labels[s]}</span>
+              <span class="kanban-col-ct">${byStatus[s].length}</span>
+            </div>
+            ${byStatus[s].map(lead => `
+              <div class="kanban-card" draggable="true"
+                ondragstart="kanbanDragStart(event,${lead.id})"
+                ondragend="this.classList.remove('dragging')">
+                <div class="kc-name">${esc(lead.business_name || '—')}</div>
+                ${lead.email ? `<div class="kc-email">${esc(lead.email)}</div>` : ''}
+                <div class="kc-footer">
+                  <span class="badge ${esc(lead.quality)}" style="font-size:9px;padding:1px 6px">${esc(lead.quality)}</span>
+                  <span class="kc-domain">${shortUrl(lead.website)}</span>
+                </div>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>`;
+  }
+
+  function kanbanDragStart(event, id) {
+    draggedId = id;
+    event.currentTarget.classList.add('dragging');
+  }
+
+  async function kanbanDrop(event, newStatus) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    if (!draggedId) return;
+    const lead = allSavedLeads.find(l => l.id === draggedId);
+    if (!lead || lead.status === newStatus) { draggedId = null; return; }
+    lead.status = newStatus;
+    draggedId = null;
+    renderKanban(allSavedLeads);
+    try {
+      await fetch(`/api/leads/${lead.id}/status`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const stats = await (await fetch('/api/leads/stats')).json();
+      renderDbStats(stats);
+    } catch { showToast('Failed to update status.', 'error'); }
+  }
+
+  // ── Database stats + charts ─────────────────────────────────────────────────
+
   function renderDbStats(stats) {
     const s = stats.by_status || {};
     const q = stats.by_quality || {};
-    const safe  = (k) => s[k] || 0;
-    const safeQ = (k) => q[k] || 0;
-    document.getElementById('stat-total').textContent        = stats.total || 0;
-    document.getElementById('stat-new').textContent          = safe('new');
-    document.getElementById('stat-contacted').textContent    = safe('contacted');
-    document.getElementById('stat-qualified').textContent    = safe('qualified');
-    document.getElementById('stat-disqualified').textContent = safe('disqualified');
-    document.getElementById('stat-high').textContent         = safeQ('High');
-    document.getElementById('stat-moderate').textContent     = safeQ('Moderate');
-    document.getElementById('stat-low').textContent          = safeQ('Low');
+    const safe  = k => s[k] || 0;
+    const safeQ = k => q[k] || 0;
+    const total = stats.total || 0;
+
+    animateNum(document.getElementById('stat-total'),        total);
+    animateNum(document.getElementById('stat-new'),          safe('new'));
+    animateNum(document.getElementById('stat-contacted'),    safe('contacted'));
+    animateNum(document.getElementById('stat-qualified'),    safe('qualified'));
+    animateNum(document.getElementById('stat-disqualified'), safe('disqualified'));
+    animateNum(document.getElementById('stat-high'),         safeQ('High'));
+    animateNum(document.getElementById('stat-moderate'),     safeQ('Moderate'));
+    animateNum(document.getElementById('stat-low'),          safeQ('Low'));
+
+    document.getElementById('quality-chart').innerHTML = svgDonut([
+      { value: safeQ('High'),     color: '#22c55e' },
+      { value: safeQ('Moderate'), color: '#eab308' },
+      { value: safeQ('Low'),      color: '#ef4444' },
+    ], total);
+
+    document.getElementById('status-chart').innerHTML = svgDonut([
+      { value: safe('new'),          color: '#94a3b8' },
+      { value: safe('contacted'),    color: '#60a5fa' },
+      { value: safe('qualified'),    color: '#22c55e' },
+      { value: safe('disqualified'), color: '#ef4444' },
+    ], total);
+
+    updatePipeline(s, total);
   }
+
+  function animateNum(el, target) {
+    if (!el) return;
+    const cur = parseInt(el.textContent) || 0;
+    if (cur === target) { el.textContent = target; return; }
+    const dur = 500, start = performance.now();
+    const tick = now => {
+      const p = Math.min((now - start) / dur, 1);
+      el.textContent = Math.round(cur + (target - cur) * (p < .5 ? 2*p*p : -1+(4-2*p)*p));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function svgDonut(segments, total, size = 80) {
+    if (!total) {
+      return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="#1e2533" stroke-width="10"/><text x="50" y="55" text-anchor="middle" fill="#334155" font-size="13" font-family="sans-serif">0</text></svg>`;
+    }
+    const r = 36, circ = 2 * Math.PI * r;
+    let rot = -90, segs = '';
+    for (const seg of segments) {
+      if (!seg.value) continue;
+      const pct = seg.value / total;
+      const dash = (pct * circ).toFixed(2), gap = (circ * (1 - pct)).toFixed(2);
+      segs += `<circle cx="50" cy="50" r="${r}" fill="none" stroke="${seg.color}" stroke-width="10" stroke-dasharray="${dash} ${gap}" transform="rotate(${rot} 50 50)"/>`;
+      rot += pct * 360;
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="none" stroke="#1e2533" stroke-width="10"/>${segs}<text x="50" y="55" text-anchor="middle" fill="#e2e8f0" font-size="17" font-weight="bold" font-family="sans-serif">${total}</text></svg>`;
+  }
+
+  function updatePipeline(s, total) {
+    const wrap = document.getElementById('pipeline-wrap');
+    if (!total) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const stages = [
+      { key: 'new',          color: '#475569', label: 'New' },
+      { key: 'contacted',    color: '#60a5fa', label: 'Contacted' },
+      { key: 'qualified',    color: '#22c55e', label: 'Qualified' },
+      { key: 'disqualified', color: '#ef4444', label: 'Disqualified' },
+    ];
+    document.getElementById('pipeline-track').innerHTML = stages.map(st => {
+      const pct = ((s[st.key] || 0) / total * 100).toFixed(1);
+      return `<div class="pipeline-seg" style="width:${pct}%;background:${st.color}" title="${st.label}: ${s[st.key]||0}"></div>`;
+    }).join('');
+    document.getElementById('pipeline-labels').innerHTML = stages.map(st =>
+      `<span class="pipeline-lbl" style="color:${st.color}">
+        <span class="pipeline-dot" style="background:${st.color}"></span>
+        ${st.label}: ${s[st.key] || 0}
+      </span>`).join('');
+  }
+
+  // ── Saved lead status / delete ──────────────────────────────────────────────
 
   async function updateLeadStatus(id, status) {
     try {
       await fetch(`/api/leads/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      const statsResp = await fetch('/api/leads/stats');
-      renderDbStats(await statsResp.json());
-    } catch (err) {
-      showToast('Failed to update status.', 'error');
-    }
+      const stats = await (await fetch('/api/leads/stats')).json();
+      renderDbStats(stats);
+    } catch { showToast('Failed to update status.', 'error'); }
   }
 
   async function deleteSavedLead(id, btn) {
@@ -786,20 +1228,17 @@
     try {
       await fetch(`/api/leads/${id}`, { method: 'DELETE' });
       btn.closest('tr').remove();
+      allSavedLeads = allSavedLeads.filter(l => l.id !== id);
       showToast('Lead removed.', '');
-      const statsResp = await fetch('/api/leads/stats');
-      const stats = await statsResp.json();
+      const stats = await (await fetch('/api/leads/stats')).json();
       renderDbStats(stats);
       loadDbBadge(stats.total);
-    } catch (err) {
-      showToast('Failed to delete lead.', 'error');
-    }
+    } catch { showToast('Failed to delete lead.', 'error'); }
   }
 
   async function loadDbBadge(total) {
     if (total === undefined) {
-      const resp = await fetch('/api/leads/stats');
-      const data = await resp.json();
+      const data = await (await fetch('/api/leads/stats')).json();
       total = data.total || 0;
     }
     const badge = document.getElementById('db-badge');
@@ -807,9 +1246,9 @@
     badge.classList.toggle('has-data', total > 0);
   }
 
-  // ── UI helpers ─────────────────────────────────────────────────────────────
+  // ── UI helpers ──────────────────────────────────────────────────────────────
 
-  function setLoading(on, label = '', sub = '') {
+  function setLoading(on, label = '') {
     const btn = document.getElementById('scrape-btn');
     const ls  = document.getElementById('loading-state');
     btn.disabled = on;
@@ -817,7 +1256,8 @@
     ls.classList.toggle('visible', on);
     if (on) {
       document.getElementById('loading-label').textContent = label;
-      document.getElementById('loading-sub').textContent = sub;
+      document.getElementById('loading-sub').textContent = 'Leads appear as they\'re found.';
+      showSkeletons();
     }
   }
 
@@ -826,10 +1266,7 @@
     el.textContent = 'Error: ' + msg;
     el.style.display = 'block';
   }
-
-  function hideError() {
-    document.getElementById('error-banner').style.display = 'none';
-  }
+  function hideError() { document.getElementById('error-banner').style.display = 'none'; }
 
   let toastTimer;
   function showToast(msg, type = '') {
@@ -842,48 +1279,35 @@
 
   function evIcon(status) {
     if (!status) return '';
-    return {
-      valid:      '<span class="ev valid" title="Email verified">&#10003;</span>',
-      invalid:    '<span class="ev invalid" title="Invalid — removed">&#10005;</span>',
-      unverified: '<span class="ev unverified" title="Domain ok, mailbox unconfirmed">?</span>',
-    }[status] || '';
+    return { valid: '<span class="ev valid">&#10003;</span>', invalid: '<span class="ev invalid">&#10005;</span>', unverified: '<span class="ev unverified">?</span>' }[status] || '';
   }
 
   function esc(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
   function shortUrl(url) {
     try { return new URL(url).hostname.replace('www.', ''); } catch { return url || ''; }
   }
-
   function fmtDate(ts) {
     if (!ts) return '—';
     const d = new Date(ts);
     return isNaN(d) ? ts : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  // ── Session storage ────────────────────────────────────────────────────────
+  // ── Session storage ─────────────────────────────────────────────────────────
 
-  function saveSession(leadsData, label, location) {
-    try {
-      sessionStorage.setItem('lastLeads', JSON.stringify({ leads: leadsData, label, location, ts: Date.now() }));
-    } catch (e) {}
+  function saveSession(leadsData, label, loc) {
+    try { sessionStorage.setItem('lastLeads', JSON.stringify({ leads: leadsData, label, location: loc, ts: Date.now() })); } catch {}
   }
-
   function checkSession() {
     try {
-      const raw = sessionStorage.getItem('lastLeads');
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (!data.leads || !data.leads.length) return;
+      const data = JSON.parse(sessionStorage.getItem('lastLeads'));
+      if (!data?.leads?.length) return;
       if (Date.now() - data.ts > 86400000) { sessionStorage.removeItem('lastLeads'); return; }
-      document.getElementById('session-banner-sub').textContent =
-        `${data.leads.length} leads — "${data.label}" in ${data.location}`;
+      document.getElementById('session-banner-sub').textContent = `${data.leads.length} leads — "${data.label}" in ${data.location}`;
       document.getElementById('session-banner').style.display = 'flex';
-    } catch (e) {}
+    } catch {}
   }
-
   function restoreSession() {
     try {
       const data = JSON.parse(sessionStorage.getItem('lastLeads'));
@@ -895,11 +1319,12 @@
       document.getElementById('table-wrap').style.display = 'block';
       document.getElementById('status-bar').style.display = 'flex';
       document.getElementById('save-btn').style.display = 'flex';
+      document.getElementById('view-toggle').style.display = 'flex';
+      skeletonsCleared = true;
       renderLeads();
       showToast(`Restored ${leads.length} leads.`, 'success');
-    } catch (e) {}
+    } catch {}
   }
-
   function dismissSession() {
     sessionStorage.removeItem('lastLeads');
     document.getElementById('session-banner').style.display = 'none';
