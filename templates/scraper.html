@@ -377,7 +377,7 @@
     return [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
   }
 
-  function runScrape() {
+  async function runScrape() {
     const industries = getSelectedIndustries();
     const location = document.getElementById('sel-location').value;
     const count = parseInt(document.getElementById('inp-count').value) || 15;
