@@ -385,7 +385,7 @@
 
     if (!industries.length || !location) { showToast('Select at least one industry and a location.', 'error'); return; }
 
-    if (activeSource) { activeSource.close(); activeSource = null; }
+    if (activeSource) { clearInterval(activeSource); activeSource = null; }
 
     currentIndustry = industries.join(', ');
     currentLocation = location;
@@ -401,61 +401,75 @@
     document.getElementById('leads-tbody').innerHTML = '';
     document.getElementById('live-count').textContent = '';
 
-    const url = new URL('/api/scrape-stream', window.location.origin);
-    url.searchParams.set('industries', industries.join(','));
-    url.searchParams.set('location', location);
-    url.searchParams.set('count', count);
-
-    const source = new EventSource(url.toString());
-    activeSource = source;
-
-    source.onmessage = async (e) => {
-      const data = JSON.parse(e.data);
-
-      if (data._done) {
-        source.close();
-        activeSource = null;
-        setLoading(false);
-
-        if (leads.length === 0) {
-          document.getElementById('empty-state').innerHTML = `
-            <div class="icon">&#128683;</div>
-            <strong>No leads found</strong>
-            <p>Try a different industry, location, or increase the count.</p>`;
-          document.getElementById('empty-state').style.display = 'block';
-        } else {
-          if (validate) {
-            await runValidate();
-          }
-          document.getElementById('save-btn').style.display = 'flex';
-          showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
-        }
-        return;
-      }
-
-      if (data.error) {
-        source.close();
-        activeSource = null;
-        setLoading(false);
-        showError(data.error);
-        return;
-      }
-
-      leads.push(data);
-      appendLeadRow(data, leads.length - 1);
-      document.getElementById('table-wrap').style.display = 'block';
-      document.getElementById('status-bar').style.display = 'flex';
-      document.getElementById('live-count').textContent = `${leads.length} found so far…`;
-      updateStatusCounts();
-    };
-
-    source.onerror = () => {
-      if (source.readyState === EventSource.CLOSED) return;
-      source.close();
-      activeSource = null;
+    // Start job on server
+    let job_id;
+    try {
+      const startResp = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industries: industries.join(','), location, count }),
+      });
+      const startData = await startResp.json();
+      if (!startResp.ok) throw new Error(startData.error || 'Failed to start job');
+      job_id = startData.job_id;
+    } catch (err) {
       setLoading(false);
-      if (leads.length === 0) showError('Connection lost. Please try again.');
-    };
+      showError(err.message);
+      return;
+    }
+
+    // Poll every 3 seconds for new leads
+    let seenCount = 0;
+    const pollInterval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/jobs/${job_id}`);
+        const job = await r.json();
+
+        // Append any new leads since last poll
+        const newLeads = (job.leads || []).slice(seenCount);
+        newLeads.forEach(lead => {
+          leads.push(lead);
+          appendLeadRow(lead, leads.length - 1);
+          document.getElementById('table-wrap').style.display = 'block';
+          document.getElementById('status-bar').style.display = 'flex';
+        });
+        seenCount += newLeads.length;
+        if (newLeads.length) {
+          document.getElementById('live-count').textContent = `${leads.length} found so far…`;
+          updateStatusCounts();
+        }
+
+        if (job.status === 'done' || job.status === 'error') {
+          clearInterval(pollInterval);
+          activeSource = null;
+          setLoading(false);
+
+          if (job.status === 'error') {
+            showError(job.error || 'Scraping failed.');
+            return;
+          }
+          if (leads.length === 0) {
+            document.getElementById('empty-state').innerHTML = `
+              <div class="icon">&#128683;</div>
+              <strong>No leads found</strong>
+              <p>Try a different industry or location, or increase the count.</p>`;
+            document.getElementById('empty-state').style.display = 'block';
+          } else {
+            if (validate) await runValidate();
+            document.getElementById('save-btn').style.display = 'flex';
+            document.getElementById('live-count').textContent = '';
+            showToast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}.`, 'success');
+          }
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        activeSource = null;
+        setLoading(false);
+        if (leads.length === 0) showError('Could not reach server. Please try again.');
+      }
+    }, 3000);
+
+    activeSource = pollInterval;
   }
 
   // ── Validate emails ────────────────────────────────────────────────────────

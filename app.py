@@ -1,16 +1,19 @@
 import io
 import json
 import os
-import queue as q_module
 import threading
+import uuid
 from datetime import date
 
-from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
+from flask import Flask, jsonify, render_template, request, send_file
 
 from db import init_db
 
 app = Flask(__name__)
 init_db()
+
+# In-memory job store — short-lived (scrapes complete in < 3 min)
+_jobs = {}
 
 INDUSTRIES = {
     'Tier 1 — Home Services': ['Pest Control', 'HVAC', 'Electricians', 'Plumbers'],
@@ -58,49 +61,49 @@ def scraper():
     return render_template('scraper.html', industries=INDUSTRIES, locations=LOCATIONS)
 
 
-# ── SSE scrape stream ──────────────────────────────────────────────────────────
+# ── Job-based scraping (polling — works on any proxy/host) ───────────────────
 
-@app.route('/api/scrape-stream')
-def api_scrape_stream():
+@app.route('/api/jobs', methods=['POST'])
+def start_job():
     from scraper import scrape_leads_stream
 
-    industries = [i.strip() for i in request.args.get('industries', '').split(',') if i.strip()]
-    location = request.args.get('location', '').strip()
-    count = max(1, min(int(request.args.get('count', 15)), 50))
+    data = request.json or {}
+    industries = [i.strip() for i in data.get('industries', '').split(',') if i.strip()]
+    location = data.get('location', '').strip()
+    count = max(1, min(int(data.get('count', 15)), 50))
 
     if not industries or not location:
         return jsonify({'error': 'At least one industry and a location are required'}), 400
 
-    result_q = q_module.Queue()
+    job_id = uuid.uuid4().hex[:10]
+    _jobs[job_id] = {'status': 'running', 'leads': [], 'error': None}
 
-    def run_scraper():
+    def run():
         try:
             for item in scrape_leads_stream(industries, location, count):
-                result_q.put(item)
-        except Exception as e:
-            result_q.put({'error': str(e), '_done': True, 'total': 0})
-
-    threading.Thread(target=run_scraper, daemon=True).start()
-
-    def generate():
-        while True:
-            try:
-                item = result_q.get(timeout=20)
-                yield f'data: {json.dumps(item)}\n\n'
-                if item.get('_done') or item.get('error'):
+                if item.get('_done'):
+                    _jobs[job_id]['status'] = 'done'
                     break
-            except q_module.Empty:
-                yield ': keep-alive\n\n'  # prevents Render proxy from dropping connection
+                elif item.get('error'):
+                    _jobs[job_id]['status'] = 'error'
+                    _jobs[job_id]['error'] = item['error']
+                    break
+                else:
+                    _jobs[job_id]['leads'].append(item)
+        except Exception as e:
+            _jobs[job_id]['status'] = 'error'
+            _jobs[job_id]['error'] = str(e)
 
-    return Response(
-        stream_with_context(generate()),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',
-            'Connection': 'keep-alive',
-        },
-    )
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'job_id': job_id})
+
+
+@app.route('/api/jobs/<job_id>')
+def poll_job(job_id):
+    job = _jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+    return jsonify({'status': job['status'], 'leads': job['leads'], 'error': job['error']})
 
 
 # ── Email validation ───────────────────────────────────────────────────────────

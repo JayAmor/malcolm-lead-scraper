@@ -21,6 +21,29 @@ SKIP_DOMAINS = [
     'healthgrades.com', 'zocdoc.com', 'vitals.com',
 ]
 
+# Manus methodology: reject generic inboxes and free email domains
+_GENERIC_LOCAL = {
+    'info', 'contact', 'admin', 'support', 'hello', 'team', 'sales',
+    'marketing', 'noreply', 'no-reply', 'webmaster', 'office', 'mail',
+    'enquiries', 'enquiry', 'general', 'service', 'services', 'help',
+    'billing', 'reception', 'inquiries', 'inquiry', 'privacy',
+}
+_FREE_DOMAINS = {
+    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+    'icloud.com', 'live.com', 'msn.com', 'ymail.com', 'protonmail.com',
+}
+# National chains / enterprises to skip — SMB focus only
+_ENTERPRISE_KEYWORDS = [
+    'terminix', 'orkin', 'aptive', 'rollins', 'ehrlich', 'rentokil',
+    'roto-rooter', 'mr. rooter', 'mr rooter',
+    'mr. electric', 'mister sparky', 'mr electric',
+    'carrier', 'trane', 'lennox', 'rheem', 'york',
+    'century 21', 'keller williams', 're/max', 'remax', 'coldwell banker',
+    'aspen dental', 'pacific dental', 'heartland dental',
+    'laseraway', 'ideal image', 'skinspirit',
+    'brookdale', 'sunrise senior', 'atria senior',
+]
+
 USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -177,6 +200,10 @@ def analyze_website(url, title, industry, location, prefetched=None):
         has_google_ads = detect_google_ads(html)
         city_state = pre.get('city_state') or location
 
+        # Skip national chains / enterprises — SMB focus only
+        if _is_enterprise(business_name, url):
+            return None
+
         # Check /contact and /about only if we're still missing email or contact
         if not email or not contact_name:
             sub = _try_subpages(url)
@@ -185,9 +212,16 @@ def analyze_website(url, title, industry, location, prefetched=None):
             contact_name = contact_name or sub.get('contact_name')
 
         if not email:
-            return None  # Hard filter: must have email
+            return None
+
+        # Apply Manus email quality rules: free domain and domain-mismatch = discard
+        ok, email_flag = _quality_email(email, url)
+        if not ok:
+            return None
 
         notes = []
+        if email_flag == 'generic':
+            notes.append('Generic inbox (info@/contact@) — look for named contact')
         if not has_blog:
             notes.append('No blog — content gap opportunity')
         else:
@@ -305,6 +339,42 @@ def extract_email(soup, html):
 
 def _valid_email(email):
     return bool(re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', email))
+
+
+def _quality_email(email, website_url=None):
+    """
+    Applies Manus-style email quality rules:
+    - Not a free email domain (gmail, yahoo, etc.)
+    - Domain matches business website domain
+    Generic local parts (info@, contact@) are flagged but not rejected —
+    they're noted as lower quality so the user can decide.
+    """
+    if not email or '@' not in email:
+        return False, 'invalid'
+    local, domain = email.lower().split('@', 1)
+    if domain in _FREE_DOMAINS:
+        return False, 'free_domain'
+    if website_url:
+        try:
+            site_domain = urlparse(website_url).netloc.lower().replace('www.', '')
+            email_domain = domain.replace('www.', '')
+            # Only reject if domains share no common root at all
+            # e.g. reject info@gmail.com for beesplumbing.com, but keep
+            # sales@beesplumbing.com for beesplumbingandheating.com
+            site_root = site_domain.split('.')[0] if site_domain else ''
+            email_root = email_domain.split('.')[0] if email_domain else ''
+            if site_root and email_root and site_root not in email_root and email_root not in site_root:
+                return False, 'domain_mismatch'
+        except Exception:
+            pass
+    if local in _GENERIC_LOCAL:
+        return True, 'generic'   # Keep but flag
+    return True, 'named'
+
+
+def _is_enterprise(name, url):
+    text = (name + ' ' + url).lower()
+    return any(kw in text for kw in _ENTERPRISE_KEYWORDS)
 
 
 def extract_phone(soup, html):
