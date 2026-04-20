@@ -982,12 +982,27 @@
   // ── Copy to clipboard ───────────────────────────────────────────────────────
 
   function copyText(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
+    const flash = () => {
       const orig = btn.innerHTML;
       btn.innerHTML = '&#10003;';
       btn.classList.add('copied');
       setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
-    }).catch(() => showToast('Could not copy to clipboard', 'error'));
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(flash).catch(() => _fallbackCopy(text, btn, flash));
+    } else {
+      _fallbackCopy(text, btn, flash);
+    }
+  }
+  function _fallbackCopy(text, btn, flash) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(el);
+    el.select();
+    try { document.execCommand('copy'); flash(); }
+    catch { showToast('Could not copy to clipboard', 'error'); }
+    document.body.removeChild(el);
   }
 
   // ── Saved Leads tab ─────────────────────────────────────────────────────────
@@ -1326,7 +1341,13 @@
   // ── Session storage ─────────────────────────────────────────────────────────
 
   function saveSession(leadsData, label, loc) {
-    try { sessionStorage.setItem('lastLeads', JSON.stringify({ leads: leadsData, label, location: loc, ts: Date.now() })); } catch {}
+    try {
+      const payload = JSON.stringify({ leads: leadsData, label, location: loc, ts: Date.now() });
+      if (payload.length > 4_000_000) { showToast('Results too large to cache — save to database.', ''); return; }
+      sessionStorage.setItem('lastLeads', payload);
+    } catch (e) {
+      if (e.name === 'QuotaExceededError') showToast('Session storage full — save to database.', '');
+    }
   }
   function checkSession() {
     try {

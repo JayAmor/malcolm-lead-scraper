@@ -1,13 +1,17 @@
+import json
 import sqlite3
+import time
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / 'leads.db'
 
 VALID_STATUSES = {'new', 'contacted', 'qualified', 'disqualified'}
 
+_JOB_TTL = 600  # seconds — completed jobs older than this are purged
+
 
 def _conn():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)  # timeout prevents lock crashes
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -32,8 +36,73 @@ def init_db():
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Persist scrape jobs so they survive Render restarts/deploys
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS scrape_jobs (
+                id         TEXT PRIMARY KEY,
+                status     TEXT DEFAULT 'running',
+                leads      TEXT DEFAULT '[]',
+                error      TEXT,
+                created_at REAL
+            )
+        ''')
         conn.commit()
 
+
+# ── Scrape job persistence ────────────────────────────────────────────────────
+
+def create_job(job_id):
+    with _conn() as conn:
+        conn.execute(
+            'INSERT OR REPLACE INTO scrape_jobs (id, status, leads, error, created_at) VALUES (?,?,?,?,?)',
+            (job_id, 'running', '[]', None, time.time()),
+        )
+        conn.commit()
+
+
+def append_job_lead(job_id, lead):
+    with _conn() as conn:
+        row = conn.execute('SELECT leads FROM scrape_jobs WHERE id=?', (job_id,)).fetchone()
+        if not row:
+            return
+        leads = json.loads(row['leads'])
+        leads.append(lead)
+        conn.execute('UPDATE scrape_jobs SET leads=? WHERE id=?', (json.dumps(leads), job_id))
+        conn.commit()
+
+
+def finish_job(job_id, status, error=None):
+    with _conn() as conn:
+        conn.execute(
+            'UPDATE scrape_jobs SET status=?, error=? WHERE id=?',
+            (status, error, job_id),
+        )
+        conn.commit()
+
+
+def get_job(job_id):
+    with _conn() as conn:
+        row = conn.execute('SELECT * FROM scrape_jobs WHERE id=?', (job_id,)).fetchone()
+        if not row:
+            return None
+        return {
+            'status': row['status'],
+            'leads': json.loads(row['leads']),
+            'error': row['error'],
+        }
+
+
+def purge_old_jobs():
+    cutoff = time.time() - _JOB_TTL
+    with _conn() as conn:
+        conn.execute(
+            "DELETE FROM scrape_jobs WHERE status != 'running' AND created_at < ?",
+            (cutoff,),
+        )
+        conn.commit()
+
+
+# ── Leads ─────────────────────────────────────────────────────────────────────
 
 def save_leads(leads):
     saved = skipped = 0

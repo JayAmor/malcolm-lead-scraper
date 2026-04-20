@@ -108,15 +108,19 @@ def _search_duckduckgo(industry, location, count):
         for query in queries:
             if len(results) >= count:
                 break
-            try:
-                for r in ddgs.text(query, max_results=20):
-                    url = r.get('href', '')
-                    if url and url not in seen:
-                        seen.add(url)
-                        results.append((url, r.get('title', '')))
-                time.sleep(random.uniform(0.5, 1.0))
-            except Exception:
-                continue
+            for attempt in range(3):
+                try:
+                    for r in ddgs.text(query, max_results=20):
+                        url = r.get('href', '')
+                        if url and url not in seen:
+                            seen.add(url)
+                            results.append((url, r.get('title', '')))
+                    time.sleep(random.uniform(0.5, 1.0))
+                    break  # success — move to next query
+                except Exception:
+                    if attempt < 2:
+                        # Exponential backoff: 1.5s, 3s before retrying
+                        time.sleep(1.5 * (attempt + 1) + random.uniform(0, 0.5))
     except Exception:
         pass
 
@@ -186,7 +190,7 @@ def scrape_leads_stream(industries, location, count):
 
     while received < len(threads) and yielded < count:
         try:
-            result = result_queue.get(timeout=20)
+            result = result_queue.get(timeout=30)  # 30s: covers 7s page + 5×3s subpages
             received += 1
             if result and result.get('email'):
                 yield result

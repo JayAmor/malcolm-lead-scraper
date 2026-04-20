@@ -1,8 +1,6 @@
 import io
-import json
 import os
 import threading
-import time
 import uuid
 from datetime import date
 
@@ -12,18 +10,6 @@ from db import init_db
 
 app = Flask(__name__)
 init_db()
-
-# In-memory job store — short-lived (scrapes complete in < 3 min)
-_jobs = {}
-_JOB_TTL = 600  # seconds before a completed job is purged
-
-
-def _purge_old_jobs():
-    cutoff = time.time() - _JOB_TTL
-    stale = [jid for jid, j in _jobs.items()
-             if j.get('status') != 'running' and j.get('created_at', 0) < cutoff]
-    for jid in stale:
-        del _jobs[jid]
 
 INDUSTRIES = {
     'Tier 1 — Home Services': ['Pest Control', 'HVAC', 'Electricians', 'Plumbers'],
@@ -71,50 +57,56 @@ def scraper():
     return render_template('scraper.html', industries=INDUSTRIES, locations=LOCATIONS)
 
 
-# ── Job-based scraping (polling — works on any proxy/host) ───────────────────
+# ── Job-based scraping ────────────────────────────────────────────────────────
 
 @app.route('/api/jobs', methods=['POST'])
 def start_job():
-    from scraper import scrape_leads_stream
+    try:
+        from scraper import scrape_leads_stream
+        from db import create_job, append_job_lead, finish_job, purge_old_jobs
 
-    data = request.json or {}
-    industries = [i.strip() for i in data.get('industries', '').split(',') if i.strip()]
-    location = data.get('location', '').strip()
-    count = max(1, min(int(data.get('count', 15)), 50))
+        data = request.json or {}
+        industries = [i.strip() for i in data.get('industries', '').split(',') if i.strip()]
+        location = data.get('location', '').strip()
+        count = max(1, min(int(data.get('count', 15)), 50))
 
-    if not industries or not location:
-        return jsonify({'error': 'At least one industry and a location are required'}), 400
+        if not industries or not location:
+            return jsonify({'error': 'At least one industry and a location are required'}), 400
 
-    _purge_old_jobs()
-    job_id = uuid.uuid4().hex[:10]
-    _jobs[job_id] = {'status': 'running', 'leads': [], 'error': None, 'created_at': time.time()}
+        purge_old_jobs()
+        job_id = uuid.uuid4().hex[:10]
+        create_job(job_id)
 
-    def run():
-        try:
-            for item in scrape_leads_stream(industries, location, count):
-                if item.get('_done'):
-                    _jobs[job_id]['status'] = 'done'
-                    break
-                elif item.get('error'):
-                    _jobs[job_id]['status'] = 'error'
-                    _jobs[job_id]['error'] = item['error']
-                    break
-                else:
-                    _jobs[job_id]['leads'].append(item)
-        except Exception as e:
-            _jobs[job_id]['status'] = 'error'
-            _jobs[job_id]['error'] = str(e)
+        def run():
+            try:
+                for item in scrape_leads_stream(industries, location, count):
+                    if item.get('_done'):
+                        finish_job(job_id, 'done')
+                        break
+                    elif item.get('error'):
+                        finish_job(job_id, 'error', item['error'])
+                        break
+                    else:
+                        append_job_lead(job_id, item)
+            except Exception as e:
+                finish_job(job_id, 'error', str(e))
 
-    threading.Thread(target=run, daemon=True).start()
-    return jsonify({'job_id': job_id})
+        threading.Thread(target=run, daemon=True).start()
+        return jsonify({'job_id': job_id})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/jobs/<job_id>')
 def poll_job(job_id):
-    job = _jobs.get(job_id)
-    if not job:
-        return jsonify({'error': 'Job not found'}), 404
-    return jsonify({'status': job['status'], 'leads': job['leads'], 'error': job['error']})
+    try:
+        from db import get_job
+        job = get_job(job_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+        return jsonify(job)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ── Email validation ───────────────────────────────────────────────────────────
@@ -136,79 +128,109 @@ def api_validate_emails():
 
 @app.route('/api/export/csv', methods=['POST'])
 def api_export_csv():
-    from exporter import to_csv
-    leads = (request.json or {}).get('leads', [])
-    return send_file(
-        io.BytesIO(to_csv(leads)),
-        mimetype='text/csv',
-        as_attachment=True,
-        download_name='malcolm-leads.csv',
-    )
+    try:
+        from exporter import to_csv
+        leads = (request.json or {}).get('leads', [])
+        if not leads:
+            return jsonify({'error': 'No leads to export'}), 400
+        return send_file(
+            io.BytesIO(to_csv(leads)),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='malcolm-leads.csv',
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/export/pdf', methods=['POST'])
 def api_export_pdf():
-    from exporter import to_pdf
-    data = request.json or {}
-    leads = data.get('leads', [])
-    industry = data.get('industry', 'All Industries')
-    location = data.get('location', 'All Locations')
-    return send_file(
-        io.BytesIO(to_pdf(leads, industry, location)),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name='malcolm-leads.pdf',
-    )
+    try:
+        from exporter import to_pdf
+        data = request.json or {}
+        leads = data.get('leads', [])
+        if not leads:
+            return jsonify({'error': 'No leads to export'}), 400
+        industry = data.get('industry', 'All Industries')
+        location = data.get('location', 'All Locations')
+        return send_file(
+            io.BytesIO(to_pdf(leads, industry, location)),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='malcolm-leads.pdf',
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ── Database routes ────────────────────────────────────────────────────────────
 
 @app.route('/api/leads/save', methods=['POST'])
 def api_save_leads():
-    from db import save_leads
-    leads = (request.json or {}).get('leads', [])
-    return jsonify(save_leads(leads))
+    try:
+        from db import save_leads
+        leads = (request.json or {}).get('leads', [])
+        return jsonify(save_leads(leads))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/leads')
 def api_get_leads():
-    from db import get_all_leads
-    return jsonify({'leads': get_all_leads()})
+    try:
+        from db import get_all_leads
+        return jsonify({'leads': get_all_leads()})
+    except Exception as e:
+        return jsonify({'leads': [], 'error': str(e)}), 500
 
 
 @app.route('/api/leads/stats')
 def api_lead_stats():
-    from db import get_stats
-    return jsonify(get_stats())
+    try:
+        from db import get_stats
+        return jsonify(get_stats())
+    except Exception as e:
+        return jsonify({'total': 0, 'by_status': {}, 'by_quality': {}, 'error': str(e)}), 500
 
 
 @app.route('/api/leads/<int:lead_id>/status', methods=['PATCH'])
 def api_update_status(lead_id):
-    from db import update_status
-    status = (request.json or {}).get('status')
-    if update_status(lead_id, status):
-        return jsonify({'ok': True})
-    return jsonify({'error': 'Invalid status'}), 400
+    try:
+        from db import update_status
+        status = (request.json or {}).get('status')
+        if update_status(lead_id, status):
+            return jsonify({'ok': True})
+        return jsonify({'error': 'Invalid status'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/leads/<int:lead_id>', methods=['DELETE'])
 def api_delete_lead(lead_id):
-    from db import delete_lead
-    delete_lead(lead_id)
-    return jsonify({'ok': True})
+    try:
+        from db import delete_lead
+        delete_lead(lead_id)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/leads/export/csv')
 def api_db_export_csv():
-    from db import get_all_leads
-    from exporter import to_csv
-    leads = get_all_leads()
-    return send_file(
-        io.BytesIO(to_csv(leads)),
-        mimetype='text/csv',
-        as_attachment=True,
-        download_name='all-leads.csv',
-    )
+    try:
+        from db import get_all_leads
+        from exporter import to_csv
+        leads = get_all_leads()
+        if not leads:
+            return jsonify({'error': 'No leads in database'}), 400
+        return send_file(
+            io.BytesIO(to_csv(leads)),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='all-leads.csv',
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
