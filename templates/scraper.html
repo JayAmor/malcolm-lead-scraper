@@ -602,10 +602,30 @@
     }
 
     let seenCount = 0;
+    let pollFails = 0;
+    const MAX_FAILS = 4;
+
     const pollInterval = setInterval(async () => {
       try {
         const r = await fetch(`/api/jobs/${job_id}`);
+
+        // Job not found — service likely restarted and lost in-memory job
+        if (r.status === 404) {
+          clearInterval(pollInterval);
+          activeSource = null;
+          setLoading(false);
+          clearSkeletons();
+          if (leads.length === 0) {
+            showError('Search timed out or the server restarted. Please try again.');
+          } else {
+            showToast(`Search interrupted — ${leads.length} lead(s) recovered.`, '');
+            document.getElementById('save-btn').style.display = 'flex';
+          }
+          return;
+        }
+
         const job = await r.json();
+        pollFails = 0; // reset on success
 
         const newLeads = (job.leads || []).slice(seenCount);
         newLeads.forEach(lead => {
@@ -645,11 +665,20 @@
           }
         }
       } catch (err) {
-        clearInterval(pollInterval);
-        activeSource = null;
-        setLoading(false);
-        clearSkeletons();
-        if (leads.length === 0) showError('Could not reach server. Please try again.');
+        pollFails++;
+        if (pollFails >= MAX_FAILS) {
+          clearInterval(pollInterval);
+          activeSource = null;
+          setLoading(false);
+          clearSkeletons();
+          if (leads.length === 0) {
+            showError('Could not reach the server after several attempts. Please try again.');
+          } else {
+            showToast(`Connection lost — ${leads.length} lead(s) recovered so far.`, '');
+            document.getElementById('save-btn').style.display = 'flex';
+          }
+        }
+        // else: silently retry on next tick
       }
     }, 3000);
 

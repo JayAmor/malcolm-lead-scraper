@@ -163,12 +163,17 @@ def scrape_leads_stream(industries, location, count):
     result_queue = queue.Queue()
     work_items = all_candidates[: count * 2]
 
+    # Cap concurrent outbound HTTP to avoid overwhelming Render's free tier.
+    # 30 simultaneous scrapes × (7s page + 5×3s subpages) saturates memory fast.
+    _sem = threading.Semaphore(10)
+
     def worker(url, title, prefetched, industry_label):
-        try:
-            result = analyze_website(url, title, industry_label, location, prefetched)
-            result_queue.put(result)
-        except Exception:
-            result_queue.put(None)
+        with _sem:
+            try:
+                result = analyze_website(url, title, industry_label, location, prefetched)
+                result_queue.put(result)
+            except Exception:
+                result_queue.put(None)
 
     threads = []
     for url, title, prefetched, industry_label in work_items:
